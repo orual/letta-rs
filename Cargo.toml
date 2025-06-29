@@ -1,0 +1,58 @@
+[package]
+authors = ["Orual <orual@nonbinary.computer>"]
+edition = "2021"
+# If you change the name here, you must also do it in flake.nix (and run `cargo generate-lockfile` afterwards)
+name = "letta-rs"
+description = "A robust Rust client for the Letta REST API"
+version = "0.1.0"
+license = "MIT"
+repository = "https://github.com/srid/letta-rs"
+keywords = ["letta", "ai", "agents", "api", "client"]
+categories = ["api-bindings", "web-programming::http-client"]
+readme = "README.md"
+documentation = "https://docs.rs/letta-rs"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+# HTTP client
+reqwest = { version = "0.12", features = ["json", "stream", "rustls-tls"], default-features = false }
+tokio = { version = "1.0", features = ["full"] }
+tokio-stream = "0.1"
+futures = "0.3"
+eventsource-stream = "0.2"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Error handling
+thiserror = "2.0"
+miette = "7.0"
+
+# Utilities
+url = { version = "2.0", features = ["serde"] }
+uuid = { version = "1.0", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+bytes = "1.0"
+
+# Optional CLI (for examples/debugging)
+clap = { version = "4.5", features = ["derive", "env"], optional = true }
+env_logger = { version = "0.11", optional = true }
+
+[dev-dependencies]
+# Testing
+tokio-test = "0.4"
+mockito = "1.5"
+wiremock = "0.6"
+proptest = "1.0"
+test-case = "3.0"
+
+[features]
+default = []
+cli = ["dep:clap", "dep:env_logger", "miette/fancy"]
+
+[[bin]]
+name = "letta"
+path = "src/cli.rs"
+required-features = ["cli"]
