@@ -5,6 +5,35 @@ use crate::types::memory::MemoryBlock;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+/// Environment variable for agent tool execution.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentEnvironmentVariable {
+    /// The ID of the user that created this object.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub created_by_id: Option<String>,
+    /// The ID of the user that last updated this object.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_updated_by_id: Option<String>,
+    /// When the object was created.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub created_at: Option<Timestamp>,
+    /// When the object was last updated.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub updated_at: Option<Timestamp>,
+    /// The human-friendly ID of the agent environment variable.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+    /// The name of the environment variable.
+    pub key: String,
+    /// The value of the environment variable.
+    pub value: String,
+    /// An optional description of the environment variable.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    /// The ID of the agent this environment variable belongs to.
+    pub agent_id: String,
+}
+
 /// Agent type enum.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 
@@ -230,27 +259,98 @@ pub enum ToolReference {
     Object(serde_json::Value),
 }
 
-/// Tool rule type.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum ToolRuleType {
-    /// Continue loop after tool execution.
-    ContinueLoop,
-    /// Exit loop after tool execution.
-    ExitLoop,
-}
-
 /// Tool rule for controlling agent behavior.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ToolRule {
-    /// Tool name this rule applies to.
-    pub tool_name: String,
-    /// Rule type.
-    #[serde(rename = "type")]
-    pub rule_type: ToolRuleType,
-    /// Optional prompt template.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub prompt_template: Option<String>,
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum ToolRule {
+    /// Continue loop after tool execution.
+    #[serde(rename = "continue_loop")]
+    ContinueLoop {
+        /// Tool name this rule applies to.
+        tool_name: String,
+        /// Optional prompt template.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        prompt_template: Option<String>,
+    },
+    /// Exit loop after tool execution.
+    #[serde(rename = "exit_loop")]
+    ExitLoop {
+        /// Tool name this rule applies to.
+        tool_name: String,
+        /// Optional prompt template.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        prompt_template: Option<String>,
+    },
+    /// Terminal tool rule (deprecated, use exit_loop).
+    Terminal {
+        /// Tool name this rule applies to.
+        tool_name: String,
+        /// Optional prompt template.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        prompt_template: Option<String>,
+    },
+    /// Max count per step constraint.
+    MaxCountPerStep {
+        /// Tool name this rule applies to.
+        tool_name: String,
+        /// Optional prompt template.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        prompt_template: Option<String>,
+        /// The max limit for the total number of times this tool can be invoked in a single step.
+        max_count_limit: u32,
+    },
+    /// Conditional tool mapping based on output.
+    Conditional {
+        /// Tool name this rule applies to.
+        tool_name: String,
+        /// Optional prompt template.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        prompt_template: Option<String>,
+        /// The default child tool to be called.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        default_child: Option<String>,
+        /// The output case to check for mapping.
+        child_output_mapping: HashMap<String, String>,
+        /// Whether to throw an error when output doesn't match any case.
+        #[serde(default)]
+        require_output_mapping: bool,
+    },
+    /// Child tool rule.
+    Child {
+        /// Tool name this rule applies to.
+        tool_name: String,
+        /// Optional prompt template.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        prompt_template: Option<String>,
+        /// The name of the tool that can be a child of this tool.
+        child_tool_name: String,
+    },
+    /// Parent tool rule.
+    Parent {
+        /// Tool name this rule applies to.
+        tool_name: String,
+        /// Optional prompt template.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        prompt_template: Option<String>,
+        /// The name of the tool that can be a parent of this tool.
+        parent_tool_name: String,
+    },
+    /// Required before exit rule.
+    RequiredBeforeExit {
+        /// Tool name this rule applies to.
+        tool_name: String,
+        /// Optional prompt template.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        prompt_template: Option<String>,
+    },
+    /// Init tool rule.
+    Init {
+        /// Tool name this rule applies to.
+        tool_name: String,
+        /// Optional prompt template.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        prompt_template: Option<String>,
+    },
 }
 
 /// Response format type.
@@ -344,7 +444,7 @@ pub struct Agent {
     pub identity_ids: Option<Vec<String>>,
     /// Tool execution environment variables.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub tool_exec_environment_variables: Option<HashMap<String, String>>,
+    pub tool_exec_environment_variables: Option<Vec<AgentEnvironmentVariable>>,
     /// Organization ID.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub organization_id: Option<String>,
@@ -363,6 +463,9 @@ pub struct Agent {
     /// Response format configuration.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub response_format: Option<ResponseFormat>,
+    /// Message buffer autoclear setting.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub message_buffer_autoclear: Option<bool>,
 }
 
 /// Request to create a new agent.
@@ -626,6 +729,56 @@ pub struct UpdateAgentRequest {
     pub metadata: Option<Metadata>,
 }
 
+/// Request parameters for importing an agent from file.
+#[derive(Debug, Clone, Default)]
+pub struct ImportAgentRequest {
+    /// Whether to append a copy suffix to the agent name if it already exists.
+    pub append_copy_suffix: Option<bool>,
+    /// Whether to override existing tools with the same name.
+    pub override_existing_tools: Option<bool>,
+    /// The project ID to associate the uploaded agent with.
+    pub project_id: Option<String>,
+    /// If set to True, strips all messages from the agent before importing.
+    pub strip_messages: Option<bool>,
+}
+
+/// Search response for agents.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentsSearchResponse {
+    /// List of matching agents.
+    pub agents: Vec<Agent>,
+    /// Cursor for pagination.
+    #[serde(rename = "nextCursor")]
+    pub next_cursor: Option<String>,
+}
+
+/// Search request for agents.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct AgentsSearchRequest {
+    /// Search criteria (simplified for now).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub search: Option<Vec<String>>,
+    /// Project ID filter.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub project_id: Option<String>,
+    /// Search combinator (only "AND" supported).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub combinator: Option<String>,
+    /// Maximum number of results.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub limit: Option<u32>,
+    /// Pagination cursor.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub after: Option<String>,
+    /// Sort field.
+    #[serde(rename = "sortBy")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sort_by: Option<String>,
+    /// Sort order.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ascending: Option<bool>,
+}
+
 /// Query parameters for listing agents.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ListAgentsParams {
@@ -727,7 +880,7 @@ mod tests {
     #[test]
     fn test_agent_serialization() {
         let agent = Agent {
-            id: ResourceId::new_v4(),
+            id: "agent-00000000-0000-0000-0000-000000000000".to_string(),
             name: "Test Agent".to_string(),
             system: Some("You are a helpful assistant".to_string()),
             agent_type: AgentType::MemGPT,
@@ -773,6 +926,7 @@ mod tests {
             last_run_duration_ms: None,
             enable_sleeptime: None,
             response_format: None,
+            message_buffer_autoclear: None,
         };
 
         let json = serde_json::to_string(&agent).unwrap();

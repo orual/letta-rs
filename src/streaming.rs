@@ -3,7 +3,7 @@
 //! This module provides utilities for handling streaming responses from the Letta API,
 //! particularly for real-time messaging features.
 
-use crate::error::{LettaError, LettaResult};
+use crate::error::LettaResult;
 use futures::Stream;
 use std::pin::Pin;
 
@@ -23,7 +23,7 @@ pub struct SseEvent {
 
 /// Parse SSE events from a response stream.
 pub async fn parse_sse_stream(
-    response: reqwest::Response,
+    _response: reqwest::Response,
 ) -> LettaResult<StreamingResponse<SseEvent>> {
     // Implementation will be added when we implement streaming
     todo!("SSE parsing implementation")
@@ -40,7 +40,7 @@ mod tests {
             data: "test data".to_string(),
             id: Some("123".to_string()),
         };
-        
+
         assert_eq!(event.event_type.as_deref(), Some("message"));
         assert_eq!(event.data, "test data");
         assert_eq!(event.id.as_deref(), Some("123"));

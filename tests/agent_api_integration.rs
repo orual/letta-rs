@@ -27,6 +27,12 @@ fn test_create_agent_request_real_api() {
             read_only: false,
             description: None,
             metadata: None,
+            name: todo!(),
+            organization_id: todo!(),
+            created_by_id: todo!(),
+            last_updated_by_id: todo!(),
+            created_at: todo!(),
+            updated_at: todo!(),
         })
         .memory_block(MemoryBlock {
             id: None,
@@ -38,6 +44,12 @@ fn test_create_agent_request_real_api() {
             read_only: false,
             description: None,
             metadata: None,
+            name: todo!(),
+            organization_id: todo!(),
+            created_by_id: todo!(),
+            last_updated_by_id: todo!(),
+            created_at: todo!(),
+            updated_at: todo!(),
         })
         .tags(vec!["rust-sdk-test".to_string()])
         .build();
@@ -81,19 +93,22 @@ fn test_create_agent_request_real_api() {
 
     // Parse response and verify agent was created
     if !stdout.is_empty() {
-        let response: serde_json::Value = serde_json::from_str(&stdout)
-            .expect("Failed to parse API response as JSON");
-        
-        println!("Parsed response:\n{}", serde_json::to_string_pretty(&response).unwrap());
-        
+        let response: serde_json::Value =
+            serde_json::from_str(&stdout).expect("Failed to parse API response as JSON");
+
+        println!(
+            "Parsed response:\n{}",
+            serde_json::to_string_pretty(&response).unwrap()
+        );
+
         // Verify essential fields
         assert_eq!(response["name"].as_str(), Some("Test Agent from Rust SDK"));
         assert_eq!(response["agent_type"].as_str(), Some("memgpt_agent"));
-        
+
         // Clean up - delete the agent if ID is present
         if let Some(agent_id) = response["id"].as_str() {
             println!("Created agent with ID: {}", agent_id);
-            
+
             // Delete the test agent
             let delete_output = std::process::Command::new("curl")
                 .arg("-X")
@@ -192,17 +207,20 @@ fn test_list_agents_real_api() {
 
     // Try to deserialize into our Agent type
     if !stdout.is_empty() {
-        let response: serde_json::Value = serde_json::from_str(&stdout)
-            .expect("Failed to parse list response as JSON");
-        
+        let response: serde_json::Value =
+            serde_json::from_str(&stdout).expect("Failed to parse list response as JSON");
+
         // The response should have an 'agents' array
         if let Some(agents) = response.as_array() {
             println!("Found {} agents", agents.len());
-            
+
             // Try to deserialize the first agent
             if let Some(first_agent) = agents.first() {
-                println!("First agent JSON:\n{}", serde_json::to_string_pretty(first_agent).unwrap());
-                
+                println!(
+                    "First agent JSON:\n{}",
+                    serde_json::to_string_pretty(first_agent).unwrap()
+                );
+
                 // This will help us identify any missing fields
                 match serde_json::from_value::<Agent>(first_agent.clone()) {
                     Ok(agent) => {

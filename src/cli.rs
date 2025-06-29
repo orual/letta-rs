@@ -1,16 +1,21 @@
 //! Command-line interface for the Letta client.
 
 use clap::Parser;
-use letta_rs::{LettaClient, ClientConfig, auth::AuthConfig};
-use letta_rs::types::agent::{CreateAgentRequest, AgentType};
+use letta_rs::types::agent::{AgentType, CreateAgentRequest};
 use letta_rs::types::memory::MemoryBlock;
+use letta_rs::{auth::AuthConfig, ClientConfig, LettaClient};
 
 #[derive(Parser, Debug)]
 #[clap(author = "Orual", version, about = "Letta REST API client")]
 /// Letta command-line interface
 struct Args {
     /// Base URL for the Letta API (defaults to http://localhost:8283)
-    #[arg(short = 'u', long, env = "LETTA_BASE_URL", default_value = "http://localhost:8283")]
+    #[arg(
+        short = 'u',
+        long,
+        env = "LETTA_BASE_URL",
+        default_value = "http://localhost:8283"
+    )]
     base_url: String,
 
     /// API key for authentication (optional, can also use LETTA_API_KEY env var)
@@ -99,7 +104,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create client configuration
     let mut config = ClientConfig::new(&args.base_url)?;
-    
+
     // Set up authentication if API key is provided
     if let Some(api_key) = args.api_key.or_else(|| std::env::var("LETTA_API_KEY").ok()) {
         config = config.auth(AuthConfig::bearer(api_key));
@@ -114,8 +119,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             AgentCommand::List { limit, tags } => {
                 list_agents(&client, limit, tags).await?;
             }
-            AgentCommand::Create { name, system, agent_type, model, embedding, tags, output } => {
-                create_agent(&client, name, system, agent_type, model, embedding, tags, &output).await?;
+            AgentCommand::Create {
+                name,
+                system,
+                agent_type,
+                model,
+                embedding,
+                tags,
+                output,
+            } => {
+                create_agent(
+                    &client, name, system, agent_type, model, embedding, tags, &output,
+                )
+                .await?;
             }
             AgentCommand::Get { id, output } => {
                 get_agent(&client, &id, &output).await?;
@@ -134,7 +150,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-async fn list_agents(client: &LettaClient, limit: u32, tags: Vec<String>) -> Result<(), Box<dyn std::error::Error>> {
+async fn list_agents(
+    client: &LettaClient,
+    limit: u32,
+    tags: Vec<String>,
+) -> Result<(), Box<dyn std::error::Error>> {
     println!("Listing agents (limit: {}, tags: {:?})...", limit, tags);
     // TODO: Implement when agent API is ready
     println!("Agent listing not yet implemented");
@@ -215,12 +235,12 @@ async fn create_agent(
         });
 
     let mut request = request.build();
-    
+
     // Add model if specified (shorthand field)
     if let Some(model) = model {
         request.model = Some(model);
     }
-    
+
     // Add embedding if specified (shorthand field)
     if let Some(embedding) = embedding {
         request.embedding = Some(embedding);
@@ -257,18 +277,26 @@ async fn create_agent(
 
     // TODO: Actually send the request when API implementation is ready
     println!("\nNote: API implementation not yet complete. Use the JSON output with curl for now.");
-    
+
     Ok(())
 }
 
-async fn get_agent(client: &LettaClient, id: &str, output: &str) -> Result<(), Box<dyn std::error::Error>> {
+async fn get_agent(
+    client: &LettaClient,
+    id: &str,
+    output: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
     println!("Getting agent {}...", id);
     // TODO: Implement when agent API is ready
     println!("Agent get not yet implemented");
     Ok(())
 }
 
-async fn delete_agent(client: &LettaClient, id: &str, yes: bool) -> Result<(), Box<dyn std::error::Error>> {
+async fn delete_agent(
+    client: &LettaClient,
+    id: &str,
+    yes: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
     if !yes {
         println!("Are you sure you want to delete agent {}? (y/N)", id);
         let mut input = String::new();
@@ -278,7 +306,7 @@ async fn delete_agent(client: &LettaClient, id: &str, yes: bool) -> Result<(), B
             return Ok(());
         }
     }
-    
+
     println!("Deleting agent {}...", id);
     // TODO: Implement when agent API is ready
     println!("Agent deletion not yet implemented");

@@ -15,7 +15,12 @@
       "Bash(grep:*)",
       "Bash(ls:*)",
       "Bash(./target/debug/letta-cli:*)",
-      "Bash(cargo:*)"
+      "Bash(cargo:*)",
+      "Bash(docker compose:*)",
+      "Bash(RUST_BACKTRACE=1 cargo test test_local_server_agent_operations -- --nocapture)",
+      "Bash(LETTA_API_KEY=\"sk-let-ZjJlYTE4ODYtNmRkZC00MDY4LThhNGMtZjQ3NGUxY2FmMTg1OmYxNWU1M2FhLTU4MDEtNGYwZi05MDFmLTgyYjg3ZDViNzlhZA==\" cargo test --test cloud_api_test test_cloud_agent_search -- --nocapture --ignored)",
+      "Bash(LETTA_API_KEY=\"sk-let-ZjJlYTE4ODYtNmRkZC00MDY4LThhNGMtZjQ3NGUxY2FmMTg1OmYxNWU1M2FhLTU4MDEtNGYwZi05MDFmLTgyYjg3ZDViNzlhZA==\" cargo test --test cloud_api_test test_cloud_agent_count -- --nocapture --ignored)",
+      "Bash(docker logs:*)"
     ],
     "deny": []
   }

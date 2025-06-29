@@ -2,5 +2,6 @@
 /result
 /result-lib
 .direnv
-.env
+**.env
+.claude/settings.local.json
 /.pre-commit-config.yaml

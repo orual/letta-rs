@@ -244,8 +244,8 @@ mod tests {
     #[test]
     fn test_archival_memory_serialization() {
         let memory = ArchivalMemory {
-            id: ResourceId::new_v4(),
-            agent_id: ResourceId::new_v4(),
+            id: "block-00000000-0000-0000-0000-000000000000".to_string(),
+            agent_id: "agent-00000000-0000-0000-0000-000000000000".to_string(),
             content: "Important information to remember".to_string(),
             embedding: Some(vec![0.1, 0.2, 0.3]),
             created_at: chrono::Utc::now(),

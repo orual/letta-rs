@@ -18,25 +18,25 @@ pub fn validate_resource_id(id: &str) -> LettaResult<()> {
     if id.trim().is_empty() {
         return Err(LettaError::validation("Resource ID cannot be empty"));
     }
-    
+
     if id.len() > 255 {
         return Err(LettaError::validation("Resource ID is too long"));
     }
-    
+
     Ok(())
 }
 
 /// Join URL path segments safely.
 pub fn join_paths(base: &str, segments: &[&str]) -> String {
     let mut url = base.trim_end_matches('/').to_string();
-    
+
     for segment in segments {
         if !segment.is_empty() {
             url.push('/');
             url.push_str(segment.trim_start_matches('/').trim_end_matches('/'));
         }
     }
-    
+
     url
 }
 
@@ -61,15 +61,21 @@ mod tests {
         assert!(validate_resource_id("valid-id").is_ok());
         assert!(validate_resource_id("").is_err());
         assert!(validate_resource_id("  ").is_err());
-        
+
         let long_id = "a".repeat(256);
         assert!(validate_resource_id(&long_id).is_err());
     }
 
     #[test]
     fn test_join_paths() {
-        assert_eq!(join_paths("http://example.com", &["api", "v1"]), "http://example.com/api/v1");
-        assert_eq!(join_paths("http://example.com/", &["/api/", "/v1/"]), "http://example.com/api/v1");
+        assert_eq!(
+            join_paths("http://example.com", &["api", "v1"]),
+            "http://example.com/api/v1"
+        );
+        assert_eq!(
+            join_paths("http://example.com/", &["/api/", "/v1/"]),
+            "http://example.com/api/v1"
+        );
         assert_eq!(join_paths("http://example.com", &[]), "http://example.com");
     }
 }

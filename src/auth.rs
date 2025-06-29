@@ -134,7 +134,9 @@ impl AuthConfig {
                     return Err(LettaError::auth("Bearer token cannot contain newlines"));
                 }
                 if token.len() > 1024 {
-                    return Err(LettaError::auth("Bearer token is too long (max 1024 characters)"));
+                    return Err(LettaError::auth(
+                        "Bearer token is too long (max 1024 characters)",
+                    ));
                 }
                 Ok(())
             }
@@ -177,7 +179,7 @@ impl Default for AuthConfig {
 pub fn from_env() -> Option<AuthConfig> {
     // Check for API key in common environment variables
     let env_vars = ["LETTA_API_KEY", "LETTA_TOKEN", "LETTA_AUTH_TOKEN"];
-    
+
     for var in &env_vars {
         if let Ok(token) = std::env::var(var) {
             if !token.trim().is_empty() {
@@ -185,7 +187,7 @@ pub fn from_env() -> Option<AuthConfig> {
             }
         }
     }
-    
+
     None
 }
 
@@ -208,19 +210,19 @@ mod tests {
     #[test]
     fn test_apply_to_headers() {
         let mut headers = HeaderMap::new();
-        
+
         // Test bearer token
         let auth = AuthConfig::bearer("test-token");
         auth.apply_to_headers(&mut headers).unwrap();
-        
+
         let auth_header = headers.get(AUTHORIZATION).unwrap();
         assert_eq!(auth_header.to_str().unwrap(), "Bearer test-token");
-        
+
         // Test no auth
         let mut headers = HeaderMap::new();
         let auth = AuthConfig::none();
         auth.apply_to_headers(&mut headers).unwrap();
-        
+
         assert!(!headers.contains_key(AUTHORIZATION));
     }
 
@@ -229,20 +231,20 @@ mod tests {
         // Valid bearer token
         let auth = AuthConfig::bearer("valid-token");
         assert!(auth.validate().is_ok());
-        
+
         // Empty token
         let auth = AuthConfig::bearer("");
         assert!(auth.validate().is_err());
-        
+
         // Token with newlines
         let auth = AuthConfig::bearer("token\nwith\nnewlines");
         assert!(auth.validate().is_err());
-        
+
         // Very long token
         let long_token = "a".repeat(1025);
         let auth = AuthConfig::bearer(long_token);
         assert!(auth.validate().is_err());
-        
+
         // No auth is always valid
         let auth = AuthConfig::none();
         assert!(auth.validate().is_ok());
@@ -252,7 +254,7 @@ mod tests {
     fn test_display() {
         let auth = AuthConfig::bearer("token");
         assert_eq!(auth.to_string(), "Bearer token authentication");
-        
+
         let auth = AuthConfig::none();
         assert_eq!(auth.to_string(), "No authentication");
     }
@@ -261,7 +263,7 @@ mod tests {
     fn test_from_env() {
         // This test would need environment variables set to work properly
         // In a real scenario, we'd use a test framework that can set env vars
-        
+
         // Test that it doesn't panic when no env vars are set
         let auth = from_env();
         // Could be None or Some depending on environment

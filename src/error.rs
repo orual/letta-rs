@@ -3,8 +3,8 @@
 //! This module provides comprehensive error types with rich diagnostics
 //! via [`miette`] for excellent error reporting and debugging experience.
 
+use serde::{Deserialize, Serialize};
 use std::fmt;
-use serde::{Serialize, Deserialize};
 
 /// Result type alias for Letta operations.
 pub type LettaResult<T> = Result<T, LettaError>;
@@ -55,22 +55,22 @@ impl ErrorBody {
         // Try to parse as JSON first
         if let Ok(json) = serde_json::from_str::<serde_json::Value>(body) {
             // Try to deserialize into known error types
-            
+
             // Try unauthorized error first (most specific)
             if let Ok(unauthorized) = serde_json::from_value::<UnauthorizedError>(json.clone()) {
                 return Self::Unauthorized(unauthorized);
             }
-            
+
             // Try detail error
             if let Ok(detail) = serde_json::from_value::<DetailError>(json.clone()) {
                 return Self::Detail(detail);
             }
-            
+
             // Try message error
             if let Ok(message) = serde_json::from_value::<MessageError>(json.clone()) {
                 return Self::Message(message);
             }
-            
+
             // Fall back to unstructured JSON
             Self::Json(json)
         } else {
@@ -90,11 +90,11 @@ impl ErrorBody {
             } else {
                 body.to_string()
             };
-            
+
             Self::Text(text)
         }
     }
-    
+
     /// Extract a human-readable message from the error body.
     pub fn message(&self) -> Option<String> {
         match self {
@@ -118,21 +118,20 @@ impl ErrorBody {
             }
         }
     }
-    
+
     /// Extract an error code if available.
     pub fn code(&self) -> Option<String> {
         match self {
-            Self::Json(json) => {
-                json.get("code")
-                    .or_else(|| json.get("error_code"))
-                    .or_else(|| json.get("type"))
-                    .and_then(|v| v.as_str())
-                    .map(|s| s.to_string())
-            }
+            Self::Json(json) => json
+                .get("code")
+                .or_else(|| json.get("error_code"))
+                .or_else(|| json.get("type"))
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
             _ => None,
         }
     }
-    
+
     /// Check if this is a validation error.
     pub fn is_validation_error(&self) -> bool {
         match self {
@@ -140,15 +139,21 @@ impl ErrorBody {
             _ => false,
         }
     }
-    
+
     /// Get the raw string representation of the error body.
     pub fn as_str(&self) -> String {
         match self {
             Self::Text(text) => text.clone(),
             Self::Json(json) => serde_json::to_string(json).unwrap_or_else(|_| json.to_string()),
-            Self::Unauthorized(err) => serde_json::to_string(err).unwrap_or_else(|_| format!("{:?}", err)),
-            Self::Detail(err) => serde_json::to_string(err).unwrap_or_else(|_| format!("{:?}", err)),
-            Self::Message(err) => serde_json::to_string(err).unwrap_or_else(|_| format!("{:?}", err)),
+            Self::Unauthorized(err) => {
+                serde_json::to_string(err).unwrap_or_else(|_| format!("{:?}", err))
+            }
+            Self::Detail(err) => {
+                serde_json::to_string(err).unwrap_or_else(|_| format!("{:?}", err))
+            }
+            Self::Message(err) => {
+                serde_json::to_string(err).unwrap_or_else(|_| format!("{:?}", err))
+            }
         }
     }
 }
@@ -368,7 +373,7 @@ impl LettaError {
     /// Automatically parses and structures the error body.
     pub fn from_response(status: u16, body_str: String) -> Self {
         let body = ErrorBody::from_response(&body_str);
-        
+
         // Extract message from structured body or use default
         let message = body
             .message()
@@ -386,11 +391,7 @@ impl LettaError {
     }
 
     /// Create a new API error with specific error body.
-    pub fn api_with_body(
-        status: u16,
-        message: impl Into<String>,
-        body: ErrorBody,
-    ) -> Self {
+    pub fn api_with_body(status: u16, message: impl Into<String>, body: ErrorBody) -> Self {
         Self::Api {
             status,
             message: message.into(),
@@ -588,31 +589,31 @@ mod tests {
         // Test unauthorized error pattern
         let unauthorized_json = r#"{"message": "Unauthorized", "details": "You are attempting to access a resource...", "ownership": "This is api.letta.com..."}"#;
         let body = ErrorBody::from_response(unauthorized_json);
-        
+
         assert!(matches!(body, ErrorBody::Unauthorized(_)));
         assert_eq!(body.message(), Some("Unauthorized".to_string()));
-        
+
         // Test simple detail pattern
         let detail_json = r#"{"detail": "Not Found"}"#;
         let body = ErrorBody::from_response(detail_json);
-        
+
         assert!(matches!(body, ErrorBody::Detail(_)));
         assert_eq!(body.message(), Some("Not Found".to_string()));
-        
+
         // Test validation error pattern
         let validation_json = r#"{"detail": "1 validation error for Tool..."}"#;
         let body = ErrorBody::from_response(validation_json);
-        
+
         assert!(matches!(body, ErrorBody::Detail(_)));
         assert!(body.is_validation_error());
-        
+
         // Test message pattern
         let message_json = r#"{"message": "Simple error"}"#;
         let body = ErrorBody::from_response(message_json);
-        
+
         assert!(matches!(body, ErrorBody::Message(_)));
         assert_eq!(body.message(), Some("Simple error".to_string()));
-        
+
         // Test plain text
         let body = ErrorBody::from_response("Server error");
         assert!(matches!(body, ErrorBody::Text(_)));
@@ -624,23 +625,26 @@ mod tests {
         // Test unauthorized error
         let unauthorized_json = r#"{"message": "Unauthorized", "details": "You are attempting to access a resource...", "ownership": "This is api.letta.com..."}"#;
         let err = LettaError::from_response(401, unauthorized_json.to_string());
-        
+
         assert_eq!(err.status_code(), Some(401));
         assert!(err.is_unauthorized());
         assert_eq!(err.to_string(), "API error 401: Unauthorized");
-        
+
         let (message, details, ownership) = err.unauthorized_details().unwrap();
         assert_eq!(message, "Unauthorized");
         assert!(details.contains("You are attempting to access"));
         assert!(ownership.contains("api.letta.com"));
-        
+
         // Test validation error
         let validation_json = r#"{"detail": "1 validation error for Tool"}"#;
         let err = LettaError::from_response(422, validation_json.to_string());
-        
+
         assert!(err.is_validation_error());
-        assert_eq!(err.to_string(), "API error 422: 1 validation error for Tool");
-        
+        assert_eq!(
+            err.to_string(),
+            "API error 422: 1 validation error for Tool"
+        );
+
         // Test plain text error
         let err = LettaError::from_response(500, "Internal Server Error".to_string());
         assert_eq!(err.to_string(), "API error 500: Internal Server Error");
@@ -653,10 +657,10 @@ mod tests {
             details: "Access denied".to_string(),
             ownership: "api.letta.com".to_string(),
         });
-        
+
         let json = serde_json::to_string(&unauthorized).unwrap();
         let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
-        
+
         assert_eq!(parsed["message"], "Unauthorized");
         assert_eq!(parsed["details"], "Access denied");
         assert_eq!(parsed["ownership"], "api.letta.com");
@@ -675,11 +679,11 @@ mod tests {
     fn test_real_letta_api_responses() {
         // Test actual 401 unauthorized response from Letta API
         let unauthorized_response = r#"{"message":"Unauthorized","details":"You are attempting to access a resource that you don't have permission to access, this could be because you have not provided an appropriate API key or are connecting to the wrong server","ownership":"This is api.letta.com, which is used to access Letta Cloud resources. If you are self hosting, you should connect to your own server, usually http://localhost:8283"}"#;
-        
+
         let err = LettaError::from_response(401, unauthorized_response.to_string());
         assert!(err.is_unauthorized());
         assert_eq!(err.to_string(), "API error 401: Unauthorized");
-        
+
         let (message, details, ownership) = err.unauthorized_details().unwrap();
         assert_eq!(message, "Unauthorized");
         assert!(details.contains("you don't have permission"));
@@ -696,12 +700,12 @@ mod tests {
 <pre>Not Found</pre>
 </body>
 </html>"#;
-        
+
         let err = LettaError::from_response(404, html_404.to_string());
         assert_eq!(err.to_string(), "API error 404: Not Found");
         assert!(matches!(err.response_body(), Some(ErrorBody::Text(_))));
 
-        // Test actual 404 JSON response  
+        // Test actual 404 JSON response
         let json_404 = r#"{"detail":"Not Found"}"#;
         let err = LettaError::from_response(404, json_404.to_string());
         assert_eq!(err.to_string(), "API error 404: Not Found");
@@ -718,13 +722,13 @@ mod tests {
 <pre>Bad Request</pre>
 </body>
 </html>"#;
-        
+
         let err = LettaError::from_response(400, html_400.to_string());
         assert_eq!(err.to_string(), "API error 400: Bad Request");
 
         // Test actual validation error response
         let validation_error = r#"{"detail":"1 validation error for Tool\n  Value error, 'close_file' is not a user-defined function in module 'letta.functions.function_sets.files' [type=value_error, input_value=<letta.orm.tool.Tool object at 0x7ac389d9c860>, input_type=Tool]\n    For further information visit https://errors.pydantic.dev/2.11/v/value_error"}"#;
-        
+
         let err = LettaError::from_response(500, validation_error.to_string());
         assert!(err.is_validation_error());
         assert!(err.to_string().contains("validation error"));

@@ -1,7 +1,7 @@
 //! # Letta Rust Client
 //!
 //! A robust, fully-featured Rust client for the [Letta REST API](https://docs.letta.com/api-reference/overview).
-//! 
+//!
 //! Letta is a platform for building stateful AI agents with persistent memory and context
 //! across conversations. This client provides a comprehensive, idiomatic Rust interface
 //! to all Letta API endpoints.
@@ -65,6 +65,6 @@ pub mod types;
 pub mod utils;
 
 // Re-export main types for convenience
-pub use client::{LettaClient, ClientConfig, ClientBuilder};
+pub use client::{ClientBuilder, ClientConfig, LettaClient};
 pub use error::{LettaError, LettaResult};
 pub use types::*;

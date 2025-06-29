@@ -138,16 +138,16 @@ impl ClientBuilder {
 
     /// Build the client.
     pub fn build(self) -> LettaResult<LettaClient> {
-        let base_url = self.base_url.ok_or_else(|| {
-            LettaError::config("Base URL is required")
-        })?;
+        let base_url = self
+            .base_url
+            .ok_or_else(|| LettaError::config("Base URL is required"))?;
 
         let mut config = ClientConfig::new(base_url)?;
-        
+
         if let Some(auth) = self.auth {
             config = config.auth(auth);
         }
-        
+
         if let Some(timeout) = self.timeout {
             config = config.timeout(timeout);
         }

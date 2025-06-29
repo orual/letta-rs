@@ -1,0 +1,6 @@
+[submodule "letta-node"]
+	path = letta-node
+	url = https://github.com/letta-ai/letta-node
+[submodule "letta-python"]
+	path = letta-python
+	url = https://github.com/letta-ai/letta-python

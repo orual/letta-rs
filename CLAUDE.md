@@ -114,6 +114,8 @@ The local server runs on `http://localhost:8283` and requires no authentication.
 - `local-server/` - Local Letta server for development testing
   - `compose.yml` - Docker Compose configuration
   - `server.env` - Server environment variables
+- `letta-node/` - Node.js/TypeScript SDK reference (git submodule)
+- `letta-python/` - Python SDK reference (git submodule)
 
 ### Build System
 This project uses a dual build approach:
@@ -179,6 +181,148 @@ All list endpoints use cursor-based pagination with `before`, `after`, `limit` p
 - **Base URLs**:
   - Local: `http://localhost:8283`
   - Cloud: `https://api.letta.com` (with API key)
+- **Reference Implementations**:
+  - TypeScript SDK: `letta-node/` submodule
+  - Python SDK: `letta-python/` submodule
+
+## Implementation Roadmap
+
+Based on analysis of Python and TypeScript SDKs, our current Rust implementation covers ~5% of the full API surface. Here's our comprehensive plan:
+
+### Current Status (Completed)
+- ✅ Basic agent CRUD operations (list, create, get, delete)
+- ✅ Core project structure and error handling
+- ✅ Integration tests against local server
+- ✅ Basic type system for agents and memory blocks
+
+### Phase 1: Core Infrastructure
+**Priority: CRITICAL - needed for basic functionality**
+
+1. **Complete Agent API** - finish all agent endpoints
+   - `count()`, `export_file()`, `import_file()`
+   - `summarize_agent_conversation()`, `search()`
+   - Agent sub-APIs: core_memory, archival_memory, tools, sources
+
+2. **Message API with Streaming** - implement SSE streaming for messages
+   - `/v1/agents/{id}/messages` with full CRUD
+   - Server-sent events streaming via reqwest + tokio
+   - Token-level streaming with `stream_tokens` parameter
+
+3. **Enhanced Error Handling** - status-specific error types
+   - HTTP status code to specific error type mapping
+   - Better error messages matching Python/TypeScript patterns
+
+4. **Environment Management** - proper cloud vs local handling
+   - Environment enum (LettaCloud, Local)
+   - Authentication per environment
+
+### Phase 2: Memory & Tools
+**Priority: HIGH - core Letta functionality**
+
+5. **Memory API Completeness**
+   - Core memory operations (get/set persona, human)
+   - Archival memory with semantic search
+   - Memory blocks and variables management
+   - Passage retrieval and management
+
+6. **Tool Management** - basic CRUD operations
+   - Tool creation, listing, updating, deletion
+   - `create_from_function()` for auto tool creation
+   - MCP server integration (later phase)
+
+7. **Source Management** - file upload/processing
+   - Document upload and processing status
+   - Source CRUD operations
+   - File handling pipeline
+
+8. **Health & Infrastructure**
+   - `/v1/health` endpoint
+   - Better authentication patterns
+
+### Phase 3: Advanced Features
+**Priority: MEDIUM - advanced use cases**
+
+9. **Groups & Multi-Agent**
+   - Multi-agent group conversations
+   - Group management and coordination
+
+10. **Runs & Execution Management**
+    - Execution runs tracking
+    - Run state management
+
+11. **Jobs & Steps** - async processing with feedback
+    - Asynchronous job management
+    - Step feedback and management
+    - Background processing patterns
+
+12. **Advanced Streaming**
+    - Token-level streaming refinements
+    - Multiple concurrent streams
+    - Stream error handling
+
+13. **Templates & Projects**
+    - Agent template system
+    - Project management functionality
+
+### Phase 4: Ecosystem Features
+**Priority: LOW - nice-to-have**
+
+14. **Batches & Telemetry**
+    - Batch job processing
+    - Usage tracking and telemetry
+
+15. **Voice Integration**
+    - Voice conversation support
+    - Audio processing pipeline
+
+16. **Comprehensive Type System**
+    - Complete all missing types (~230 types)
+    - Auto-generated type definitions
+    - Complex union types for message content
+
+### Missing API Categories (22 total)
+Currently missing these major API endpoints:
+- Batches, Blocks, ClientSideAccessTokens, EmbeddingModels
+- Groups, Health, Identities, Jobs, Models, Projects
+- Providers, Runs, Steps, Tags, Telemetry, Templates, Voice
+- Plus nested sub-APIs under agents (context, tools, sources, etc.)
+
+### Implementation Strategy
+1. **Focus on high-value first** - agents, messages, memory cover 80% of use cases
+2. **Streaming early** - core to Letta's value proposition
+3. **Auto-generate types** - both Python/TS use codegen, we should too
+4. **API compatibility** - match Python/TS patterns where possible
+5. **Comprehensive testing** - maintain test coverage as we expand
+
+### Current API Coverage
+- **Agents**: 100% complete ✅ (all endpoints implemented and tested)
+- **Messages**: 0% complete
+- **Memory**: 10% complete (basic types only)
+- **Tools**: 5% complete (types only)
+- **Sources**: 5% complete (types only)
+- **All other categories**: 0% complete
+
+Target: 90%+ API coverage following this roadmap.
+
+### Endpoint Availability: Local vs Cloud
+
+#### Agent API Endpoints
+| Endpoint | Local Server | Cloud API | Notes |
+|----------|--------------|-----------|-------|
+| `list()` | ✅ | ✅ | Full CRUD operations |
+| `create()` | ✅ | ✅ | |
+| `get()` | ✅ | ✅ | |
+| `delete()` | ✅ | ✅ | |
+| `summarize_agent_conversation()` | ✅ | ✅ | |
+| `count()` | ✅ | ✅ | |
+| `export_file()` | ✅ | ✅ | Returns JSON as string |
+| `import_file()` | ✅ | ✅ | Multipart file upload |
+| `search()` | ❌ | ✅ | Cloud only, requires `project_id` |
+
+**Local Server**: `http://localhost:8283` (no auth required)
+**Cloud API**: `https://api.letta.com` (requires API key)
+
+All agent endpoints work on both local and cloud except search, which is cloud-only and requires a project_id parameter.
 
 ## Important Notes
 
@@ -187,3 +331,4 @@ All list endpoints use cursor-based pagination with `before`, `after`, `limit` p
 - Darwin-specific dependencies (IOKit) are handled in the Nix configuration
 - Template was designed for easy initialization via omnix: `nix run github:juspay/omnix -- init github:srid/letta-rs`
 - Implementation should match the official Letta API specification at docs.letta.com
+- **NEVER ignore a test without asking first and getting user approval**

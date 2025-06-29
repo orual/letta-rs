@@ -3,10 +3,10 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use uuid::Uuid;
 
 /// Unique identifier for resources in the Letta API.
-pub type ResourceId = Uuid;
+/// Format: "{prefix}-{uuid}" (e.g., "agent-123e4567-e89b-12d3-a456-426614174000")
+pub type ResourceId = String;
 
 /// Timestamp type used throughout the API.
 pub type Timestamp = DateTime<Utc>;
@@ -278,7 +278,10 @@ mod tests {
         let mut metadata = Metadata::new();
         assert!(metadata.is_empty());
 
-        metadata.insert("key".to_string(), serde_json::Value::String("value".to_string()));
+        metadata.insert(
+            "key".to_string(),
+            serde_json::Value::String("value".to_string()),
+        );
         assert!(!metadata.is_empty());
         assert!(metadata.get("key").is_some());
     }
