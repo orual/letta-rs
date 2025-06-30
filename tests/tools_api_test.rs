@@ -59,7 +59,17 @@ async fn create_test_tool(client: &LettaClient, base_name: &str) -> LettaResult<
         description: Some(format!("Test tool: {}", base_name)),
         source_code: format!(
             r#"def {}(message: str) -> str:
-    """Echo the message back."""
+    """
+    Echo the provided message.
+
+    This test function takes a message and returns it with an 'Echo: ' prefix.
+
+    Args:
+        message: The message to echo back
+
+    Returns:
+        str: The echoed message with 'Echo: ' prefix
+    """
     return f"Echo: {{message}}""#,
             unique_name
         ),
@@ -81,7 +91,16 @@ async fn create_test_tool(client: &LettaClient, base_name: &str) -> LettaResult<
         tags: Some(vec!["test".to_string()]),
         return_char_limit: Some(1000),
         pip_requirements: None,
-        args_json_schema: None,
+        args_json_schema: Some(serde_json::json!({
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "description": "Message to echo"
+                }
+            },
+            "required": ["message"]
+        })),
     };
 
     println!(
@@ -331,4 +350,101 @@ async fn test_agent_tools() -> LettaResult<()> {
     client.tools().delete(tool_id).await?;
 
     Ok(())
+}
+
+#[tokio::test]
+#[serial]
+async fn test_run_tool_from_source() -> LettaResult<()> {
+    let client = create_test_client()?;
+
+    // Create a simple add function
+    let request = letta_rs::RunToolFromSourceRequest {
+        source_code: r#"
+def add_numbers(a: float, b: float) -> float:
+    """Add two numbers together.
+
+    Args:
+        a: The first number
+        b: The second number
+
+    Returns:
+        float: The sum of a and b
+    """
+    return a + b
+"#
+        .to_string(),
+        args: serde_json::json!({ "a": 5.0, "b": 3.0 }),
+        source_type: Some(SourceType::Python),
+
+        args_json_schema: Some(serde_json::json!({
+            "type": "object",
+            "properties": {
+                "a": {
+                    "type": "number",
+                    "description": "The first number"
+                },
+                "b": {
+                    "type": "number",
+                    "description": "The second number"
+                }
+            },
+            "required": ["a", "b"]
+        })),
+        json_schema: Some(serde_json::json!({
+            "name": "add_numbers",
+            "description": "Add two numbers together.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "a": {
+                        "type": "number",
+                        "description": "The first number"
+                    },
+                    "b": {
+                        "type": "number",
+                        "description": "The second number"
+                    }
+                },
+                "required": ["a", "b"]
+            }
+        })),
+        name: Some("add_numbers".to_string()),
+        ..Default::default()
+    };
+
+    // Run the tool from source
+    let result = client.tools().run_from_source(request).await?;
+
+    assert_eq!(result.status, letta_rs::ToolExecutionStatus::Success);
+    assert_eq!(result.tool_return, "8.0");
+
+    Ok(())
+}
+
+#[tokio::test]
+#[serial]
+async fn test_upsert_base_tools() {
+    let client = create_test_client().unwrap();
+
+    // Get initial tool count
+    let initial_count = client.tools().count().await.unwrap_or(0);
+    println!("Initial tool count: {}", initial_count);
+
+    // Upsert base tools
+    let tools = client
+        .tools()
+        .upsert_base_tools()
+        .await
+        .expect("Should have some base tools");
+    println!("Upserted {} base tools", tools.len());
+
+    // Verify some common base tools exist
+    let tool_names: Vec<String> = tools.iter().map(|t| t.name.clone()).collect();
+    println!("Base tools include:");
+    for (i, name) in tool_names.iter().enumerate() {
+        if i < 10 {
+            // Show first 10
+            println!("  - {}", name);
+        }
+    }
 }

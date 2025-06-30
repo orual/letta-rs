@@ -3,6 +3,7 @@
 use crate::auth::AuthConfig;
 use crate::environment::LettaEnvironment;
 use crate::error::{LettaError, LettaResult};
+use crate::retry::{retry_with_config, RetryConfig};
 use reqwest::header::HeaderMap;
 use std::time::Duration;
 use url::Url;
@@ -50,6 +51,7 @@ impl ClientConfig {
 pub struct LettaClient {
     http: reqwest::Client,
     config: ClientConfig,
+    retry_config: RetryConfig,
 }
 
 impl LettaClient {
@@ -60,7 +62,11 @@ impl LettaClient {
             .default_headers(config.headers.clone())
             .build()?;
 
-        Ok(Self { http, config })
+        Ok(Self {
+            http,
+            config,
+            retry_config: RetryConfig::default(),
+        })
     }
 
     /// Create a new client for Letta Cloud with the given API token.
@@ -133,6 +139,16 @@ impl LettaClient {
         crate::api::BlocksApi::new(self)
     }
 
+    /// Get the retry configuration.
+    pub fn retry_config(&self) -> &RetryConfig {
+        &self.retry_config
+    }
+
+    /// Set the retry configuration.
+    pub fn set_retry_config(&mut self, config: RetryConfig) {
+        self.retry_config = config;
+    }
+
     // HTTP helper methods
 
     /// Make a GET request.
@@ -140,190 +156,314 @@ impl LettaClient {
     where
         T: serde::de::DeserializeOwned,
     {
+        self.get_internal(path).await
+    }
+
+    /// Internal GET implementation with retry logic.
+    #[tracing::instrument(skip(self), fields(path = %path))]
+    async fn get_internal<T>(&self, path: &str) -> LettaResult<T>
+    where
+        T: serde::de::DeserializeOwned,
+    {
         let url = self.base_url().join(path.trim_start_matches('/'))?;
-        let mut headers = HeaderMap::new();
-        self.auth().apply_to_headers(&mut headers)?;
 
-        let response = self.http().get(url).headers(headers).send().await?;
+        retry_with_config(&self.retry_config, || async {
+            let mut headers = HeaderMap::new();
+            self.auth().apply_to_headers(&mut headers)?;
 
-        if !response.status().is_success() {
-            let status = response.status().as_u16();
-            let body = response.text().await?;
-            return Err(LettaError::from_response(status, body));
-        }
+            tracing::debug!("Sending GET request to {}", url);
+            let response = self.http().get(url.clone()).headers(headers).send().await?;
 
-        Ok(response.json().await?)
+            if !response.status().is_success() {
+                let status = response.status().as_u16();
+                let headers = response.headers().clone();
+                let body = response.text().await?;
+                return Err(LettaError::from_response_with_context(
+                    status,
+                    body,
+                    Some(&headers),
+                    Some(url.clone()),
+                    Some("GET".to_string()),
+                ));
+            }
+
+            Ok(response.json().await?)
+        })
+        .await
     }
 
     /// Make a POST request with a JSON body.
+    #[tracing::instrument(skip(self, body), fields(path = %path))]
     pub async fn post<T, B>(&self, path: &str, body: &B) -> LettaResult<T>
     where
         T: serde::de::DeserializeOwned,
         B: serde::Serialize + ?Sized,
     {
         let url = self.base_url().join(path.trim_start_matches('/'))?;
-        let mut headers = HeaderMap::new();
-        self.auth().apply_to_headers(&mut headers)?;
-        headers.insert("Content-Type", "application/json".parse().unwrap());
+        let body_json = serde_json::to_value(body)?;
 
-        let response = self
-            .http()
-            .post(url)
-            .headers(headers)
-            .json(body)
-            .send()
-            .await?;
+        retry_with_config(&self.retry_config, || async {
+            let mut headers = HeaderMap::new();
+            self.auth().apply_to_headers(&mut headers)?;
+            headers.insert("Content-Type", "application/json".parse().unwrap());
 
-        if !response.status().is_success() {
-            let status = response.status().as_u16();
-            let body = response.text().await?;
-            return Err(LettaError::from_response(status, body));
-        }
+            let response = self
+                .http()
+                .post(url.clone())
+                .headers(headers)
+                .json(&body_json)
+                .send()
+                .await?;
 
-        Ok(response.json().await?)
+            if !response.status().is_success() {
+                let status = response.status().as_u16();
+                let headers = response.headers().clone();
+                let body = response.text().await?;
+                return Err(LettaError::from_response_with_context(
+                    status,
+                    body,
+                    Some(&headers),
+                    Some(url.clone()),
+                    Some("POST".to_string()),
+                ));
+            }
+
+            Ok(response.json().await?)
+        })
+        .await
     }
 
     /// Make a PATCH request with a JSON body.
+    #[tracing::instrument(skip(self, body), fields(path = %path))]
     pub async fn patch<T, B>(&self, path: &str, body: &B) -> LettaResult<T>
     where
         T: serde::de::DeserializeOwned,
         B: serde::Serialize + ?Sized,
     {
         let url = self.base_url().join(path.trim_start_matches('/'))?;
-        let mut headers = HeaderMap::new();
-        self.auth().apply_to_headers(&mut headers)?;
-        headers.insert("Content-Type", "application/json".parse().unwrap());
+        let body_json = serde_json::to_value(body)?;
 
-        let response = self
-            .http()
-            .patch(url)
-            .headers(headers)
-            .json(body)
-            .send()
-            .await?;
+        retry_with_config(&self.retry_config, || async {
+            let mut headers = HeaderMap::new();
+            self.auth().apply_to_headers(&mut headers)?;
+            headers.insert("Content-Type", "application/json".parse().unwrap());
 
-        if !response.status().is_success() {
-            let status = response.status().as_u16();
-            let body = response.text().await?;
-            return Err(LettaError::from_response(status, body));
-        }
+            let response = self
+                .http()
+                .patch(url.clone())
+                .headers(headers)
+                .json(&body_json)
+                .send()
+                .await?;
 
-        Ok(response.json().await?)
+            if !response.status().is_success() {
+                let status = response.status().as_u16();
+                let headers = response.headers().clone();
+                let body = response.text().await?;
+                return Err(LettaError::from_response_with_context(
+                    status,
+                    body,
+                    Some(&headers),
+                    Some(url.clone()),
+                    Some("PATCH".to_string()),
+                ));
+            }
+
+            Ok(response.json().await?)
+        })
+        .await
     }
 
     /// Make a PATCH request without a body.
+    #[tracing::instrument(skip(self), fields(path = %path))]
     pub async fn patch_no_body<T>(&self, path: &str) -> LettaResult<T>
     where
         T: serde::de::DeserializeOwned,
     {
         let url = self.base_url().join(path.trim_start_matches('/'))?;
-        let mut headers = HeaderMap::new();
-        self.auth().apply_to_headers(&mut headers)?;
 
-        let response = self.http().patch(url).headers(headers).send().await?;
+        retry_with_config(&self.retry_config, || async {
+            let mut headers = HeaderMap::new();
+            self.auth().apply_to_headers(&mut headers)?;
 
-        if !response.status().is_success() {
-            let status = response.status().as_u16();
-            let body = response.text().await?;
-            return Err(LettaError::from_response(status, body));
-        }
+            let response = self
+                .http()
+                .patch(url.clone())
+                .headers(headers)
+                .send()
+                .await?;
 
-        Ok(response.json().await?)
+            if !response.status().is_success() {
+                let status = response.status().as_u16();
+                let headers = response.headers().clone();
+                let body = response.text().await?;
+                return Err(LettaError::from_response_with_context(
+                    status,
+                    body,
+                    Some(&headers),
+                    Some(url.clone()),
+                    Some("PATCH".to_string()),
+                ));
+            }
+
+            Ok(response.json().await?)
+        })
+        .await
     }
 
     /// Make a PUT request with a JSON body.
+    #[tracing::instrument(skip(self, body), fields(path = %path))]
     pub async fn put<T, B>(&self, path: &str, body: &B) -> LettaResult<T>
     where
         T: serde::de::DeserializeOwned,
         B: serde::Serialize + ?Sized,
     {
         let url = self.base_url().join(path.trim_start_matches('/'))?;
-        let mut headers = HeaderMap::new();
-        self.auth().apply_to_headers(&mut headers)?;
-        headers.insert("Content-Type", "application/json".parse().unwrap());
+        let body_json = serde_json::to_value(body)?;
 
-        let response = self
-            .http()
-            .put(url)
-            .headers(headers)
-            .json(body)
-            .send()
-            .await?;
+        retry_with_config(&self.retry_config, || async {
+            let mut headers = HeaderMap::new();
+            self.auth().apply_to_headers(&mut headers)?;
+            headers.insert("Content-Type", "application/json".parse().unwrap());
 
-        if !response.status().is_success() {
-            let status = response.status().as_u16();
-            let body = response.text().await?;
-            return Err(LettaError::from_response(status, body));
-        }
+            let response = self
+                .http()
+                .put(url.clone())
+                .headers(headers)
+                .json(&body_json)
+                .send()
+                .await?;
 
-        Ok(response.json().await?)
+            if !response.status().is_success() {
+                let status = response.status().as_u16();
+                let headers = response.headers().clone();
+                let body = response.text().await?;
+                return Err(LettaError::from_response_with_context(
+                    status,
+                    body,
+                    Some(&headers),
+                    Some(url.clone()),
+                    Some("PUT".to_string()),
+                ));
+            }
+
+            Ok(response.json().await?)
+        })
+        .await
     }
 
     /// Make a DELETE request.
+    #[tracing::instrument(skip(self), fields(path = %path))]
     pub async fn delete<T>(&self, path: &str) -> LettaResult<T>
     where
         T: serde::de::DeserializeOwned,
     {
         let url = self.base_url().join(path.trim_start_matches('/'))?;
-        let mut headers = HeaderMap::new();
-        self.auth().apply_to_headers(&mut headers)?;
 
-        let response = self.http().delete(url).headers(headers).send().await?;
+        retry_with_config(&self.retry_config, || async {
+            let mut headers = HeaderMap::new();
+            self.auth().apply_to_headers(&mut headers)?;
 
-        if !response.status().is_success() {
-            let status = response.status().as_u16();
-            let body = response.text().await?;
-            return Err(LettaError::from_response(status, body));
-        }
+            let response = self
+                .http()
+                .delete(url.clone())
+                .headers(headers)
+                .send()
+                .await?;
 
-        Ok(response.json().await?)
+            if !response.status().is_success() {
+                let status = response.status().as_u16();
+                let headers = response.headers().clone();
+                let body = response.text().await?;
+                return Err(LettaError::from_response_with_context(
+                    status,
+                    body,
+                    Some(&headers),
+                    Some(url.clone()),
+                    Some("DELETE".to_string()),
+                ));
+            }
+
+            Ok(response.json().await?)
+        })
+        .await
     }
 
     /// Make a DELETE request expecting no response body.
+    #[tracing::instrument(skip(self), fields(path = %path))]
     pub async fn delete_no_response(&self, path: &str) -> LettaResult<()> {
         let url = self.base_url().join(path.trim_start_matches('/'))?;
-        let mut headers = HeaderMap::new();
-        self.auth().apply_to_headers(&mut headers)?;
 
-        let response = self.http().delete(url).headers(headers).send().await?;
+        retry_with_config(&self.retry_config, || async {
+            let mut headers = HeaderMap::new();
+            self.auth().apply_to_headers(&mut headers)?;
 
-        if !response.status().is_success() {
-            let status = response.status().as_u16();
-            let body = response.text().await?;
-            return Err(LettaError::from_response(status, body));
-        }
+            let response = self
+                .http()
+                .delete(url.clone())
+                .headers(headers)
+                .send()
+                .await?;
 
-        Ok(())
+            if !response.status().is_success() {
+                let status = response.status().as_u16();
+                let headers = response.headers().clone();
+                let body = response.text().await?;
+                return Err(LettaError::from_response_with_context(
+                    status,
+                    body,
+                    Some(&headers),
+                    Some(url.clone()),
+                    Some("DELETE".to_string()),
+                ));
+            }
+
+            Ok(())
+        })
+        .await
     }
 
     /// Make a GET request with query parameters.
+    #[tracing::instrument(skip(self, query), fields(path = %path))]
     pub async fn get_with_query<T, Q>(&self, path: &str, query: &Q) -> LettaResult<T>
     where
         T: serde::de::DeserializeOwned,
         Q: serde::Serialize + ?Sized,
     {
         let url = self.base_url().join(path.trim_start_matches('/'))?;
-        let mut headers = HeaderMap::new();
-        self.auth().apply_to_headers(&mut headers)?;
 
-        let response = self
-            .http()
-            .get(url)
-            .headers(headers)
-            .query(query)
-            .send()
-            .await?;
+        retry_with_config(&self.retry_config, || async {
+            let mut headers = HeaderMap::new();
+            self.auth().apply_to_headers(&mut headers)?;
 
-        if !response.status().is_success() {
-            let status = response.status().as_u16();
-            let body = response.text().await?;
-            return Err(LettaError::from_response(status, body));
-        }
+            let response = self
+                .http()
+                .get(url.clone())
+                .headers(headers)
+                .query(query)
+                .send()
+                .await?;
 
-        Ok(response.json().await?)
+            if !response.status().is_success() {
+                let status = response.status().as_u16();
+                let headers = response.headers().clone();
+                let body = response.text().await?;
+                return Err(LettaError::from_response_with_context(
+                    status,
+                    body,
+                    Some(&headers),
+                    Some(url.clone()),
+                    Some("GET".to_string()),
+                ));
+            }
+
+            Ok(response.json().await?)
+        })
+        .await
     }
 
     /// Make a POST request with multipart form data.
+    #[tracing::instrument(skip(self, form), fields(path = %path))]
     pub async fn post_multipart<T>(
         &self,
         path: &str,
@@ -333,12 +473,16 @@ impl LettaClient {
         T: serde::de::DeserializeOwned,
     {
         let url = self.base_url().join(path.trim_start_matches('/'))?;
+
+        // Note: We can't retry multipart uploads easily since the form is consumed
+        // For now, we'll do a single attempt. In the future, we could implement
+        // a more sophisticated retry mechanism for multipart uploads.
         let mut headers = HeaderMap::new();
         self.auth().apply_to_headers(&mut headers)?;
 
         let response = self
             .http()
-            .post(url)
+            .post(url.clone())
             .headers(headers)
             .multipart(form)
             .send()
@@ -346,8 +490,15 @@ impl LettaClient {
 
         if !response.status().is_success() {
             let status = response.status().as_u16();
+            let headers = response.headers().clone();
             let body = response.text().await?;
-            return Err(LettaError::from_response(status, body));
+            return Err(LettaError::from_response_with_context(
+                status,
+                body,
+                Some(&headers),
+                Some(url.clone()),
+                Some("POST".to_string()),
+            ));
         }
 
         Ok(response.json().await?)
@@ -391,6 +542,12 @@ impl ClientBuilder {
     /// Set the timeout.
     pub fn timeout(mut self, timeout: Duration) -> Self {
         self.timeout = Some(timeout);
+        self
+    }
+
+    /// Set any custom headers.
+    pub fn headers(mut self, headers: HeaderMap) -> Self {
+        self.headers = Some(headers);
         self
     }
 

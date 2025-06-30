@@ -343,10 +343,14 @@ Phase 1 has been completed! All core infrastructure is now in place:
 
 For detailed Phase 1 implementation notes, see [PHASE1_ARCHIVE.md](./PHASE1_ARCHIVE.md).
 
-## Phase 2: Memory & Tool Systems
+## Phase 2: Memory & Tool Systems ✅ COMPLETED
 
-### Goals
-Complete the memory block management system and enhance tool functionality to support advanced Letta features.
+Phase 2 has been completed! All memory and tool systems are now fully implemented:
+- ✅ Memory Blocks API with full CRUD operations
+- ✅ All Tool endpoints including MCP and Composio integration
+- ✅ Infrastructure improvements (retry logic, enhanced errors, timeout)
+
+For detailed Phase 2 implementation notes, see [PHASE2_ARCHIVE.md](./PHASE2_ARCHIVE.md).
 
 ### 1. Memory Blocks API (Priority: HIGH) ✅ COMPLETED
 - [x] GET `/v1/blocks/` - List all memory blocks
@@ -371,30 +375,49 @@ All endpoints implemented with:
 - [x] DELETE `/v1/tools/{tool_id}` - Delete a tool
 - [x] GET `/v1/tools/count` - Get tools count
 - [x] PUT `/v1/tools/` - Upsert a tool
+- [x] POST `/v1/tools/run` - Run tool from source code ✅ COMPLETED
 
-#### MCP Integration (TODO)
-- [ ] GET `/v1/tools/mcp/servers` - List all configured MCP servers
-- [ ] PUT `/v1/tools/mcp/servers` - Add a new MCP server
-- [ ] GET `/v1/tools/mcp/servers/{mcp_server_name}/tools` - List tools for a specific MCP server
-- [ ] POST `/v1/tools/mcp/servers/{mcp_server_name}/{mcp_tool_name}` - Add an MCP tool to Letta
-- [ ] DELETE `/v1/tools/mcp/servers/{mcp_server_name}` - Delete an MCP server
-- [ ] PATCH `/v1/tools/mcp/servers/{mcp_server_name}` - Update an MCP server configuration
-- [ ] POST `/v1/tools/mcp/servers/test` - Test an MCP server connection
+#### MCP Integration ✅ COMPLETE
+- [x] GET `/v1/tools/mcp/servers` - List all configured MCP servers
+- [x] PUT `/v1/tools/mcp/servers` - Add a new MCP server
+- [x] GET `/v1/tools/mcp/servers/{mcp_server_name}/tools` - List tools for a specific MCP server
+- [x] POST `/v1/tools/mcp/servers/{mcp_server_name}/{mcp_tool_name}` - Add an MCP tool to Letta
+- [x] DELETE `/v1/tools/mcp/servers/{mcp_server_name}` - Delete an MCP server
+- [x] PATCH `/v1/tools/mcp/servers/{mcp_server_name}` - Update an MCP server configuration
+- [x] POST `/v1/tools/mcp/servers/test` - Test an MCP server connection
 
-#### Composio Integration (TODO)
-- [ ] GET `/v1/tools/composio/apps` - List all Composio apps
-- [ ] GET `/v1/tools/composio/apps/{composio_app_name}/actions` - List actions for a specific Composio app
-- [ ] POST `/v1/tools/composio/{composio_action_name}` - Add a Composio tool to Letta
+All endpoints implemented with:
+- Full union type support for different server types (SSE, STDIO, Streamable HTTP)
+- Proper request/response types matching TypeScript SDK
+- Integration with retry logic
+- Comprehensive integration tests using STDIO servers
 
-#### Other
+#### Composio Integration ✅ COMPLETE
+- [x] GET `/v1/tools/composio/apps` - List all Composio apps
+- [x] GET `/v1/tools/composio/apps/{composio_app_name}/actions` - List actions for a specific Composio app
+- [x] POST `/v1/tools/composio/{composio_action_name}` - Add a Composio tool to Letta
+
+#### Other ✅ COMPLETE
+- [x] POST `/v1/tools/add-base-tools` - Upsert base tools (adds/updates default tool set)
 - [ ] ~~POST `/v1/tools/from-function`~~ - Client-side feature (not an API endpoint)
   - Could implement with PyO3/WASM in future for Rust function extraction
 
 ### 3. Infrastructure Improvements (Priority: MEDIUM)
-- [ ] Add retry logic for transient failures (429, 503, etc.)
-- [ ] Implement request/response middleware for logging
-- [ ] Add request timeout configuration
-- [ ] Connection pooling optimization
+- [x] Add retry logic for transient failures (429, 503, etc.) ✅ COMPLETED
+  - Exponential backoff with jitter
+  - Configurable retry attempts and delays
+  - Smart error classification (retryable vs non-retryable)
+  - Respects Retry-After headers for rate limits
+  - Comprehensive integration tests
+- [x] Improve error types to provide more context ✅ COMPLETED
+  - Added URL and HTTP method to API errors
+  - Enhanced error help messages with request details
+  - Added `tracing` instrumentation to all HTTP methods
+  - All errors now provide rich diagnostic information
+- [x] Add request timeout configuration ✅ COMPLETED
+  - Configurable via `ClientBuilder::timeout()`
+  - Default 30 second timeout
+  - Applied to all HTTP operations
 
 ### Endpoint Availability: Local vs Cloud
 
@@ -436,7 +459,7 @@ All agent endpoints work on both local and cloud except search, which is cloud-o
 4. Add environment management (Cloud vs Local)
 
 #### In Progress 🚧
-- Implement health endpoint and infrastructure improvements
+- Phase 3 planning (see Phase 3 section below)
 
 #### Notes
 - All integration tests are now passing (cloud tests remain ignored as they require API keys)
@@ -461,12 +484,29 @@ The API accepts both bare UUIDs and prefixed UUIDs, but typically returns prefix
 ### Known Server Issues
 1. **Archival Memory Update Bug**: The PATCH `/v1/agents/{id}/archival-memory/{memory_id}` endpoint has a server-side bug where it returns response data as tuples instead of proper Passage objects. This causes deserialization failures.
 2. **Embedding Requirements**: When updating archival memory text, the server requires embedding and embedding_config fields to be provided (even though they should be optional) because the embeddings need to match the updated text.
+3. **Tool Creation Requirements**: The server has strict validation for tool creation:
+   - Python functions MUST have a docstring with an `Args:` section documenting each parameter
+   - Even if you provide `json_schema` and `args_json_schema`, the docstring is still mandatory
+   - Without proper docstrings, you'll get errors like: `"Parameter 'param_name' in function 'function_name' lacks a description in the docstring"`
+   - See `CreateToolRequest` documentation in `src/types/tool.rs` for details
 
 ### API Patterns
 1. **Redundant IDs**: Many update endpoints include the resource ID both in the URL path and the request body
 2. **Tool Names**: Tools can be referenced by both name (string) and ID when attaching to agents
 3. **Pagination**: All list endpoints support cursor-based pagination with `before`, `after`, and `limit` parameters
 4. **SSE Streaming**: Message streaming uses Server-Sent Events with automatic retry and proper error handling
+
+### Test Resource Management
+To prevent server resource exhaustion, tests should clean up all created resources. A cleanup script is provided:
+
+```bash
+# Clean up all test resources (agents, tools, blocks, sources, MCP servers)
+./cleanup_test_resources.sh
+```
+
+The script identifies test resources by name patterns (containing "test", "Test", "echo", etc.) and deletes them. This should be run if the server shows high CPU usage after running tests.
+
+**Note**: Some tests may not clean up properly, especially if they fail. The MCP integration tests in particular may leave resources behind.
 
 ## Development Principles
 

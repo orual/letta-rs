@@ -6,7 +6,6 @@ use crate::types::{
     Agent, AgentsSearchRequest, AgentsSearchResponse, CreateAgentRequest, ImportAgentRequest,
     LettaId, ListAgentsParams,
 };
-use reqwest::header::HeaderMap;
 use reqwest::multipart::{Form, Part};
 use std::path::Path;
 
@@ -32,28 +31,9 @@ impl<'a> AgentApi<'a> {
     ///
     /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
     pub async fn list(&self, params: Option<ListAgentsParams>) -> LettaResult<Vec<Agent>> {
-        let url = self.client.base_url().join("v1/agents")?;
-
-        let mut headers = HeaderMap::new();
-        self.client.auth().apply_to_headers(&mut headers)?;
-        headers.insert("Content-Type", "application/json".parse().unwrap());
-
-        let mut request = self.client.http().get(url).headers(headers);
-
-        if let Some(params) = params {
-            request = request.query(&params);
-        }
-
-        let response = request.send().await?;
-
-        if !response.status().is_success() {
-            let status = response.status().as_u16();
-            let body = response.text().await?;
-            return Err(crate::error::LettaError::from_response(status, body));
-        }
-
-        let agents: Vec<Agent> = response.json().await?;
-        Ok(agents)
+        self.client
+            .get_with_query("v1/agents", &params.unwrap_or_default())
+            .await
     }
 
     /// Create a new agent.
@@ -66,29 +46,7 @@ impl<'a> AgentApi<'a> {
     ///
     /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
     pub async fn create(&self, request: CreateAgentRequest) -> LettaResult<Agent> {
-        let url = self.client.base_url().join("v1/agents")?;
-
-        let mut headers = HeaderMap::new();
-        self.client.auth().apply_to_headers(&mut headers)?;
-        headers.insert("Content-Type", "application/json".parse().unwrap());
-
-        let response = self
-            .client
-            .http()
-            .post(url)
-            .headers(headers)
-            .json(&request)
-            .send()
-            .await?;
-
-        if !response.status().is_success() {
-            let status = response.status().as_u16();
-            let body = response.text().await?;
-            return Err(crate::error::LettaError::from_response(status, body));
-        }
-
-        let agent: Agent = response.json().await?;
-        Ok(agent)
+        self.client.post("v1/agents", &request).await
     }
 
     /// Get a specific agent by ID.
@@ -101,25 +59,7 @@ impl<'a> AgentApi<'a> {
     ///
     /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
     pub async fn get(&self, agent_id: &LettaId) -> LettaResult<Agent> {
-        let url = self
-            .client
-            .base_url()
-            .join(&format!("v1/agents/{}", agent_id))?;
-
-        let mut headers = HeaderMap::new();
-        self.client.auth().apply_to_headers(&mut headers)?;
-        headers.insert("Content-Type", "application/json".parse().unwrap());
-
-        let response = self.client.http().get(url).headers(headers).send().await?;
-
-        if !response.status().is_success() {
-            let status = response.status().as_u16();
-            let body = response.text().await?;
-            return Err(crate::error::LettaError::from_response(status, body));
-        }
-
-        let agent: Agent = response.json().await?;
-        Ok(agent)
+        self.client.get(&format!("v1/agents/{}", agent_id)).await
     }
 
     /// Delete an agent by ID.
@@ -132,29 +72,9 @@ impl<'a> AgentApi<'a> {
     ///
     /// Returns a [`LettaError`] if the request fails.
     pub async fn delete(&self, agent_id: &LettaId) -> LettaResult<()> {
-        let url = self
-            .client
-            .base_url()
-            .join(&format!("v1/agents/{}", agent_id))?;
-
-        let mut headers = HeaderMap::new();
-        self.client.auth().apply_to_headers(&mut headers)?;
-
-        let response = self
-            .client
-            .http()
-            .delete(url)
-            .headers(headers)
-            .send()
-            .await?;
-
-        if !response.status().is_success() {
-            let status = response.status().as_u16();
-            let body = response.text().await?;
-            return Err(crate::error::LettaError::from_response(status, body));
-        }
-
-        Ok(())
+        self.client
+            .delete_no_response(&format!("v1/agents/{}", agent_id))
+            .await
     }
 
     /// Summarize an agent's conversation history to a target message length.
@@ -175,32 +95,16 @@ impl<'a> AgentApi<'a> {
         agent_id: &LettaId,
         max_message_length: u32,
     ) -> LettaResult<Agent> {
-        let url = self
-            .client
-            .base_url()
-            .join(&format!("v1/agents/{}/summarize", agent_id))?;
-
-        let mut headers = HeaderMap::new();
-        self.client.auth().apply_to_headers(&mut headers)?;
-        headers.insert("Content-Type", "application/json".parse().unwrap());
-
-        let response = self
-            .client
-            .http()
-            .post(url)
-            .headers(headers)
-            .query(&[("max_message_length", max_message_length)])
-            .send()
-            .await?;
-
-        if !response.status().is_success() {
-            let status = response.status().as_u16();
-            let body = response.text().await?;
-            return Err(crate::error::LettaError::from_response(status, body));
-        }
-
-        let agent: Agent = response.json().await?;
-        Ok(agent)
+        // Empty body for POST with query params
+        self.client
+            .post(
+                &format!(
+                    "v1/agents/{}/summarize?max_message_length={}",
+                    agent_id, max_message_length
+                ),
+                &serde_json::json!({}),
+            )
+            .await
     }
 
     /// Get the count of all agents associated with a given user.
@@ -209,21 +113,7 @@ impl<'a> AgentApi<'a> {
     ///
     /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
     pub async fn count(&self) -> LettaResult<u32> {
-        let url = self.client.base_url().join("v1/agents/count")?;
-
-        let mut headers = HeaderMap::new();
-        self.client.auth().apply_to_headers(&mut headers)?;
-
-        let response = self.client.http().get(url).headers(headers).send().await?;
-
-        if !response.status().is_success() {
-            let status = response.status().as_u16();
-            let body = response.text().await?;
-            return Err(crate::error::LettaError::from_response(status, body));
-        }
-
-        let count: u32 = response.json().await?;
-        Ok(count)
+        self.client.get("v1/agents/count").await
     }
 
     /// Export the serialized JSON representation of an agent, formatted with indentation.
@@ -236,24 +126,14 @@ impl<'a> AgentApi<'a> {
     ///
     /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
     pub async fn export_file(&self, agent_id: &LettaId) -> LettaResult<String> {
-        let url = self
+        // The export endpoint returns a JSON object, but we need to return it as a string
+        let json_value: serde_json::Value = self
             .client
-            .base_url()
-            .join(&format!("v1/agents/{}/export", agent_id))?;
+            .get(&format!("v1/agents/{}/export", agent_id))
+            .await?;
 
-        let mut headers = HeaderMap::new();
-        self.client.auth().apply_to_headers(&mut headers)?;
-
-        let response = self.client.http().get(url).headers(headers).send().await?;
-
-        if !response.status().is_success() {
-            let status = response.status().as_u16();
-            let body = response.text().await?;
-            return Err(crate::error::LettaError::from_response(status, body));
-        }
-
-        let export_data = response.text().await?;
-        Ok(export_data)
+        // Serialize the JSON value to a string
+        Ok(serde_json::to_string(&json_value)?)
     }
 
     /// Import an agent from a file.
@@ -271,8 +151,6 @@ impl<'a> AgentApi<'a> {
         file_path: &Path,
         request: ImportAgentRequest,
     ) -> LettaResult<Agent> {
-        let url = self.client.base_url().join("v1/agents/import")?;
-
         // Read the file
         let file_content = tokio::fs::read(file_path).await?;
         let file_name = file_path
@@ -306,31 +184,14 @@ impl<'a> AgentApi<'a> {
             params.push(("strip_messages", strip_messages.to_string()));
         }
 
-        let mut headers = HeaderMap::new();
-        self.client.auth().apply_to_headers(&mut headers)?;
-        // Don't set Content-Type header - reqwest will set it automatically for multipart
-
-        let mut request_builder = self
-            .client
-            .http()
-            .post(url)
-            .headers(headers)
-            .multipart(form);
-
+        // Build the path with query parameters
+        let mut path = String::from("v1/agents/import");
         if !params.is_empty() {
-            request_builder = request_builder.query(&params);
+            path.push('?');
+            path.push_str(&serde_urlencoded::to_string(&params)?);
         }
 
-        let response = request_builder.send().await?;
-
-        if !response.status().is_success() {
-            let status = response.status().as_u16();
-            let body = response.text().await?;
-            return Err(crate::error::LettaError::from_response(status, body));
-        }
-
-        let agent: Agent = response.json().await?;
-        Ok(agent)
+        self.client.post_multipart(&path, form).await
     }
 
     /// Search for agents using various criteria.
@@ -343,29 +204,7 @@ impl<'a> AgentApi<'a> {
     ///
     /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
     pub async fn search(&self, request: AgentsSearchRequest) -> LettaResult<AgentsSearchResponse> {
-        let url = self.client.base_url().join("v1/agents/search")?;
-
-        let mut headers = HeaderMap::new();
-        self.client.auth().apply_to_headers(&mut headers)?;
-        headers.insert("Content-Type", "application/json".parse().unwrap());
-
-        let response = self
-            .client
-            .http()
-            .post(url)
-            .headers(headers)
-            .json(&request)
-            .send()
-            .await?;
-
-        if !response.status().is_success() {
-            let status = response.status().as_u16();
-            let body = response.text().await?;
-            return Err(crate::error::LettaError::from_response(status, body));
-        }
-
-        let search_response: AgentsSearchResponse = response.json().await?;
-        Ok(search_response)
+        self.client.post("v1/agents/search", &request).await
     }
 }
 

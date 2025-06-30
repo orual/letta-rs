@@ -202,6 +202,10 @@ pub enum LettaError {
         code: Option<String>,
         /// Structured error response body.
         body: ErrorBody,
+        /// Request URL that failed.
+        url: Option<url::Url>,
+        /// Request method that failed.
+        method: Option<String>,
     },
 
     /// JSON serialization/deserialization failed.
@@ -298,23 +302,34 @@ impl miette::Diagnostic for LettaError {
                 "Check your API key or authentication configuration. \
                  For local servers, ensure the server is running and accessible.",
             )),
-            Self::Api { status: 401, .. } => Some(Box::new(
-                "Your API key is invalid or expired. Please check your authentication credentials.",
-            )),
+            Self::Api { status: 401, url, method, .. } => {
+                let mut help = String::from("Your API key is invalid or expired. Please check your authentication credentials.");
+                if let Some(u) = url {
+                    help.push_str(&format!("\nFailed request: {} {}", method.as_deref().unwrap_or("?"), u));
+                }
+                Some(Box::new(help))
+            }
             Self::Api { status: 403, .. } => Some(Box::new(
                 "You don't have permission to access this resource. \
                  Check your API key permissions.",
             )),
-            Self::Api { status: 404, .. } => Some(Box::new(
-                "The requested resource was not found. \
-                 Verify the resource ID and that it exists.",
-            )),
+            Self::Api { status: 404, url, .. } => {
+                let mut help = String::from("The requested resource was not found. Verify the resource ID and that it exists.");
+                if let Some(u) = url {
+                    help.push_str(&format!("\nRequested URL: {}", u));
+                }
+                Some(Box::new(help))
+            }
             Self::Api { status: 429, .. } => Some(Box::new(
                 "You're being rate limited. Please wait before making more requests.",
             )),
-            Self::Api { status: 500..=599, .. } => Some(Box::new(
-                "The server encountered an error. Please try again later or contact support.",
-            )),
+            Self::Api { status: 500..=599, url, method, .. } => {
+                let mut help = String::from("The server encountered an error. Please try again later or contact support.");
+                if let (Some(u), Some(m)) = (url, method) {
+                    help.push_str(&format!("\nFailed request: {} {}", m, u));
+                }
+                Some(Box::new(help))
+            }
             Self::Config { .. } => Some(Box::new(
                 "Check your client configuration, including base URL and authentication settings.",
             )),
@@ -361,6 +376,8 @@ impl LettaError {
             message: message.into(),
             code: None,
             body: ErrorBody::Text(String::new()),
+            url: None,
+            method: None,
         }
     }
 
@@ -371,12 +388,36 @@ impl LettaError {
             message: message.into(),
             code: Some(code.into()),
             body: ErrorBody::Text(String::new()),
+            url: None,
+            method: None,
         }
     }
 
     /// Create a new API error from response body.
     /// Automatically parses and structures the error body and maps to specific error types.
     pub fn from_response(status: u16, body_str: String) -> Self {
+        Self::from_response_with_context(status, body_str, None, None, None)
+    }
+
+    /// Create a new API error from response body with optional headers.
+    /// Automatically parses and structures the error body and maps to specific error types.
+    pub fn from_response_with_headers(
+        status: u16,
+        body_str: String,
+        headers: Option<&reqwest::header::HeaderMap>,
+    ) -> Self {
+        Self::from_response_with_context(status, body_str, headers, None, None)
+    }
+
+    /// Create a new API error from response body with full context.
+    /// Automatically parses and structures the error body and maps to specific error types.
+    pub fn from_response_with_context(
+        status: u16,
+        body_str: String,
+        headers: Option<&reqwest::header::HeaderMap>,
+        url: Option<url::Url>,
+        method: Option<String>,
+    ) -> Self {
         let body = ErrorBody::from_response(&body_str);
 
         // Extract message from structured body or use default
@@ -397,6 +438,8 @@ impl LettaError {
                         message,
                         code,
                         body,
+                        url,
+                        method,
                     }
                 } else {
                     Self::Auth { message }
@@ -416,6 +459,8 @@ impl LettaError {
                         message,
                         code,
                         body,
+                        url,
+                        method,
                     }
                 }
             }
@@ -435,7 +480,15 @@ impl LettaError {
             }
             429 => {
                 // Rate limit - try to extract retry-after from headers or body
-                let retry_after = Self::extract_retry_after(&body);
+                let retry_after = if let Some(headers) = headers {
+                    headers
+                        .get("retry-after")
+                        .and_then(|v| v.to_str().ok())
+                        .and_then(|v| v.parse::<u64>().ok())
+                        .or_else(|| Self::extract_retry_after(&body))
+                } else {
+                    Self::extract_retry_after(&body)
+                };
                 Self::RateLimit { retry_after }
             }
             408 | 504 => {
@@ -449,6 +502,8 @@ impl LettaError {
                     message,
                     code,
                     body,
+                    url,
+                    method,
                 }
             }
         }
@@ -461,6 +516,8 @@ impl LettaError {
             message: message.into(),
             code: body.code(),
             body,
+            url: None,
+            method: None,
         }
     }
 

@@ -139,6 +139,77 @@ async fn test_list_agents() {
     let config = ClientConfig::new("http://localhost:8283").unwrap();
     let client = LettaClient::new(config).unwrap();
 
+    // Build a request with all our updated types including advanced features
+    let request = CreateAgentRequest {
+        name: Some("Validation Test Agent".to_string()),
+        system: Some("You are a test agent for validating Rust data structures".to_string()),
+        agent_type: Some(AgentType::MemGPT),
+        memory_blocks: Some(vec![
+            Block {
+                id: None,
+                label: "human".to_string(),
+                value: "The human's name is unknown.".to_string(),
+                limit: Some(2000),
+                is_template: false,
+                preserve_on_migration: false,
+                read_only: false,
+                description: Some("Information about the human".to_string()),
+                metadata: None,
+                name: None,
+                organization_id: None,
+                created_by_id: None,
+                last_updated_by_id: None,
+                created_at: None,
+                updated_at: None,
+            },
+            Block {
+                id: None,
+                label: "persona".to_string(),
+                value: "I am a validation test agent.".to_string(),
+                limit: Some(2000),
+                is_template: false,
+                preserve_on_migration: false,
+                read_only: false,
+                description: Some("Agent persona".to_string()),
+                metadata: None,
+                name: None,
+                organization_id: None,
+                created_by_id: None,
+                last_updated_by_id: None,
+                created_at: None,
+                updated_at: None,
+            },
+        ]),
+        tool_rules: Some(vec![
+            ToolRule::ContinueLoop {
+                tool_name: "core_memory_append".to_string(),
+                prompt_template: Some("Continue after memory append".to_string()),
+            },
+            ToolRule::ExitLoop {
+                tool_name: "send_message".to_string(),
+                prompt_template: Some("Exit after sending message".to_string()),
+            },
+        ]),
+        tags: Some(vec!["test".to_string(), "validation".to_string()]),
+        model: Some("letta/letta-free".to_string()),
+        embedding: Some("letta/letta-free".to_string()),
+        ..Default::default()
+    };
+
+    // Create agent using our SDK
+    let created_agent = client
+        .agents()
+        .create(request)
+        .await
+        .expect("Failed to create agent");
+
+    println!(
+        "✅ Successfully created agent with ID: {}",
+        created_agent.id
+    );
+    println!("   Name: {}", created_agent.name);
+    println!("   Type: {:?}", created_agent.agent_type);
+
     // List agents using our SDK
     let agents = client
         .agents()

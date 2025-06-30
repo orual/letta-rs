@@ -258,7 +258,7 @@ async fn test_block_error_handling() -> LettaResult<()> {
         label: "".to_string(), // Empty label might be invalid
         ..Default::default()
     };
-    let result = client.blocks().create(invalid_request).await;
+    let _result = client.blocks().create(invalid_request).await;
     // Server might accept empty strings, so we just check it doesn't panic
 
     Ok(())

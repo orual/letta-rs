@@ -54,31 +54,12 @@ impl<'a> MessageApi<'a> {
         agent_id: &LettaId,
         params: Option<ListMessagesRequest>,
     ) -> LettaResult<Vec<LettaMessageUnion>> {
-        let url = self
-            .client
-            .base_url()
-            .join(&format!("v1/agents/{}/messages", agent_id))?;
-
-        let mut headers = HeaderMap::new();
-        self.client.auth().apply_to_headers(&mut headers)?;
-        headers.insert("Content-Type", "application/json".parse().unwrap());
-
-        let mut request = self.client.http().get(url).headers(headers);
-
-        if let Some(params) = params {
-            request = request.query(&params);
-        }
-
-        let response = request.send().await?;
-
-        if !response.status().is_success() {
-            let status = response.status().as_u16();
-            let body = response.text().await?;
-            return Err(crate::error::LettaError::from_response(status, body));
-        }
-
-        let messages: Vec<LettaMessageUnion> = response.json().await?;
-        Ok(messages)
+        self.client
+            .get_with_query(
+                &format!("v1/agents/{}/messages", agent_id),
+                &params.unwrap_or_default(),
+            )
+            .await
     }
 
     /// Send messages to an agent and get response.
@@ -96,32 +77,9 @@ impl<'a> MessageApi<'a> {
         agent_id: &LettaId,
         request: CreateMessagesRequest,
     ) -> LettaResult<LettaResponse> {
-        let url = self
-            .client
-            .base_url()
-            .join(&format!("v1/agents/{}/messages", agent_id))?;
-
-        let mut headers = HeaderMap::new();
-        self.client.auth().apply_to_headers(&mut headers)?;
-        headers.insert("Content-Type", "application/json".parse().unwrap());
-
-        let response = self
-            .client
-            .http()
-            .post(url)
-            .headers(headers)
-            .json(&request)
-            .send()
-            .await?;
-
-        if !response.status().is_success() {
-            let status = response.status().as_u16();
-            let body = response.text().await?;
-            return Err(crate::error::LettaError::from_response(status, body));
-        }
-
-        let letta_response: LettaResponse = response.json().await?;
-        Ok(letta_response)
+        self.client
+            .post(&format!("v1/agents/{}/messages", agent_id), &request)
+            .await
     }
 
     /// Reset an agent's message history.
@@ -139,15 +97,6 @@ impl<'a> MessageApi<'a> {
         agent_id: &LettaId,
         add_default_initial_messages: Option<bool>,
     ) -> LettaResult<crate::types::Agent> {
-        let url = self
-            .client
-            .base_url()
-            .join(&format!("v1/agents/{}/reset-messages", agent_id))?;
-
-        let mut headers = HeaderMap::new();
-        self.client.auth().apply_to_headers(&mut headers)?;
-        headers.insert("Content-Type", "application/json".parse().unwrap());
-
         let mut body = serde_json::Map::new();
         if let Some(add_default) = add_default_initial_messages {
             body.insert(
@@ -156,23 +105,9 @@ impl<'a> MessageApi<'a> {
             );
         }
 
-        let response = self
-            .client
-            .http()
-            .patch(url)
-            .headers(headers)
-            .json(&body)
-            .send()
-            .await?;
-
-        if !response.status().is_success() {
-            let status = response.status().as_u16();
-            let body = response.text().await?;
-            return Err(crate::error::LettaError::from_response(status, body));
-        }
-
-        let agent: crate::types::Agent = response.json().await?;
-        Ok(agent)
+        self.client
+            .patch(&format!("v1/agents/{}/reset-messages", agent_id), &body)
+            .await
     }
 
     /// Send messages to an agent and stream the response.
@@ -327,32 +262,12 @@ impl<'a> MessageApi<'a> {
         message_id: &LettaId,
         request: crate::types::UpdateMessageRequest,
     ) -> LettaResult<LettaMessageUnion> {
-        let url = self
-            .client
-            .base_url()
-            .join(&format!("v1/agents/{}/messages/{}", agent_id, message_id))?;
-
-        let mut headers = HeaderMap::new();
-        self.client.auth().apply_to_headers(&mut headers)?;
-        headers.insert("Content-Type", "application/json".parse().unwrap());
-
-        let response = self
-            .client
-            .http()
-            .patch(url)
-            .headers(headers)
-            .json(&request)
-            .send()
-            .await?;
-
-        if !response.status().is_success() {
-            let status = response.status().as_u16();
-            let body = response.text().await?;
-            return Err(crate::error::LettaError::from_response(status, body));
-        }
-
-        let message: LettaMessageUnion = response.json().await?;
-        Ok(message)
+        self.client
+            .patch(
+                &format!("v1/agents/{}/messages/{}", agent_id, message_id),
+                &request,
+            )
+            .await
     }
 
     /// Create messages asynchronously and return a run object.
@@ -377,32 +292,9 @@ impl<'a> MessageApi<'a> {
         agent_id: &LettaId,
         request: CreateMessagesRequest,
     ) -> LettaResult<crate::types::Run> {
-        let url = self
-            .client
-            .base_url()
-            .join(&format!("v1/agents/{}/messages/async", agent_id))?;
-
-        let mut headers = HeaderMap::new();
-        self.client.auth().apply_to_headers(&mut headers)?;
-        headers.insert("Content-Type", "application/json".parse().unwrap());
-
-        let response = self
-            .client
-            .http()
-            .post(url)
-            .headers(headers)
-            .json(&request)
-            .send()
-            .await?;
-
-        if !response.status().is_success() {
-            let status = response.status().as_u16();
-            let body = response.text().await?;
-            return Err(crate::error::LettaError::from_response(status, body));
-        }
-
-        let run: crate::types::Run = response.json().await?;
-        Ok(run)
+        self.client
+            .post(&format!("v1/agents/{}/messages/async", agent_id), &request)
+            .await
     }
 }
 

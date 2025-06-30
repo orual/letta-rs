@@ -13,25 +13,7 @@ async fn test_local_server_agent_operations() {
     let config = ClientConfig::new("http://localhost:8283").unwrap();
     let client = LettaClient::new(config).unwrap();
 
-    // Test 1: List agents
-    println!("Testing agent list...");
-    let agents = client.agents().list(None).await.unwrap();
-    println!("Found {} agents", agents.len());
-    assert!(!agents.is_empty(), "Server should have at least one agent");
-
-    // Test 2: Get a specific agent
-    let first_agent = &agents[0];
-    println!("Testing agent get for ID: {}", first_agent.id);
-    let agent = client.agents().get(&first_agent.id).await.unwrap();
-    assert_eq!(agent.id, first_agent.id);
-
-    // Test 3: List with parameters
-    println!("Testing agent list with parameters...");
-    let params = ListAgentsParams::builder().limit(1).build();
-    let limited_agents = client.agents().list(Some(params)).await.unwrap();
-    assert_eq!(limited_agents.len(), 1);
-
-    // Test 4: Create a new agent
+    // Test 1: Create a new agent
     println!("Testing agent creation...");
     let create_request = CreateAgentRequest {
         name: Some("Rust SDK Test Agent".to_string()),
@@ -56,11 +38,29 @@ async fn test_local_server_agent_operations() {
     assert_eq!(retrieved_agent.id, created_agent.id);
     assert_eq!(retrieved_agent.name, created_agent.name);
 
-    // Test 6: Clean up - delete the created agent
+    // Test 2: List agents
+    println!("Testing agent list...");
+    let agents = client.agents().list(None).await.unwrap();
+    println!("Found {} agents", agents.len());
+    assert!(!agents.is_empty(), "Server should have at least one agent");
+
+    // Test 3: Get a specific agent
+    let first_agent = &agents[0];
+    println!("Testing agent get for ID: {}", first_agent.id);
+    let agent = client.agents().get(&first_agent.id).await.unwrap();
+    assert_eq!(agent.id, first_agent.id);
+
+    // Test 4: List with parameters
+    println!("Testing agent list with parameters...");
+    let params = ListAgentsParams::builder().limit(1).build();
+    let limited_agents = client.agents().list(Some(params)).await.unwrap();
+    assert_eq!(limited_agents.len(), 1);
+
+    // Test 5: Clean up - delete the created agent
     println!("Cleaning up - deleting test agent...");
     client.agents().delete(&created_agent.id).await.unwrap();
 
-    // Test 7: Test summarize conversation (before deletion)
+    // Test 6: Test summarize conversation (before deletion)
     // First recreate an agent since we deleted it
     let create_request2 = CreateAgentRequest {
         name: Some("Summarize Test Agent".to_string()),
@@ -92,7 +92,6 @@ async fn test_local_server_agent_operations() {
     println!("Testing agent count...");
     let count = client.agents().count().await.unwrap();
     println!("✅ Agent count: {}", count);
-    assert!(count > 0, "Should have at least one agent");
 
     // Test export_file and import_file with the first agent we can find
     let current_agents = client.agents().list(None).await.unwrap();

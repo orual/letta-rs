@@ -19,13 +19,12 @@ async fn test_blocks_count() -> LettaResult<()> {
     match client.blocks().count().await {
         Ok(count) => {
             println!("Blocks count: {}", count);
-            assert!(count >= 0);
         }
         Err(e) => {
             println!("Error getting blocks count: {:?}", e);
             // Check if it's a 404 (endpoint not found)
             if let letta_rs::error::LettaError::Api {
-                status, message, ..
+                status, message: _, ..
             } = &e
             {
                 if *status == 404 {
@@ -55,7 +54,7 @@ async fn test_blocks_list() -> LettaResult<()> {
             println!("Error listing blocks: {:?}", e);
             // Check if it's a 404 (endpoint not found)
             if let letta_rs::error::LettaError::Api {
-                status, message, ..
+                status, message: _, ..
             } = &e
             {
                 if *status == 404 {
