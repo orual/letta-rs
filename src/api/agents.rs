@@ -4,7 +4,7 @@ use crate::client::LettaClient;
 use crate::error::LettaResult;
 use crate::types::{
     Agent, AgentsSearchRequest, AgentsSearchResponse, CreateAgentRequest, ImportAgentRequest,
-    ListAgentsParams,
+    LettaId, ListAgentsParams,
 };
 use reqwest::header::HeaderMap;
 use reqwest::multipart::{Form, Part};
@@ -100,7 +100,7 @@ impl<'a> AgentApi<'a> {
     /// # Errors
     ///
     /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
-    pub async fn get(&self, agent_id: &str) -> LettaResult<Agent> {
+    pub async fn get(&self, agent_id: &LettaId) -> LettaResult<Agent> {
         let url = self
             .client
             .base_url()
@@ -131,7 +131,7 @@ impl<'a> AgentApi<'a> {
     /// # Errors
     ///
     /// Returns a [`LettaError`] if the request fails.
-    pub async fn delete(&self, agent_id: &str) -> LettaResult<()> {
+    pub async fn delete(&self, agent_id: &LettaId) -> LettaResult<()> {
         let url = self
             .client
             .base_url()
@@ -172,7 +172,7 @@ impl<'a> AgentApi<'a> {
     /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
     pub async fn summarize_agent_conversation(
         &self,
-        agent_id: &str,
+        agent_id: &LettaId,
         max_message_length: u32,
     ) -> LettaResult<Agent> {
         let url = self
@@ -235,7 +235,7 @@ impl<'a> AgentApi<'a> {
     /// # Errors
     ///
     /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
-    pub async fn export_file(&self, agent_id: &str) -> LettaResult<String> {
+    pub async fn export_file(&self, agent_id: &LettaId) -> LettaResult<String> {
         let url = self
             .client
             .base_url()
@@ -300,7 +300,7 @@ impl<'a> AgentApi<'a> {
             ));
         }
         if let Some(project_id) = request.project_id {
-            params.push(("project_id", project_id));
+            params.push(("project_id", project_id.to_string()));
         }
         if let Some(strip_messages) = request.strip_messages {
             params.push(("strip_messages", strip_messages.to_string()));

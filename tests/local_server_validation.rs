@@ -1,7 +1,7 @@
 //! Integration tests for validating data structures against local Letta server.
 
 use letta_rs::types::agent::{AgentType, CreateAgentRequest, ToolRule};
-use letta_rs::types::memory::MemoryBlock;
+use letta_rs::types::memory::Block;
 use letta_rs::{ClientConfig, LettaClient};
 
 #[tokio::test]
@@ -16,7 +16,7 @@ async fn test_create_agent_json_format() {
         system: Some("You are a test agent for validating Rust data structures".to_string()),
         agent_type: Some(AgentType::MemGPT),
         memory_blocks: Some(vec![
-            MemoryBlock {
+            Block {
                 id: None,
                 label: "human".to_string(),
                 value: "The human's name is unknown.".to_string(),
@@ -33,7 +33,7 @@ async fn test_create_agent_json_format() {
                 created_at: None,
                 updated_at: None,
             },
-            MemoryBlock {
+            Block {
                 id: None,
                 label: "persona".to_string(),
                 value: "I am a validation test agent.".to_string(),
@@ -92,7 +92,7 @@ async fn test_create_agent_json_format() {
     // Clean up - delete the agent
     client
         .agents()
-        .delete(&created_agent.id.to_string())
+        .delete(&created_agent.id)
         .await
         .expect("Failed to delete agent");
 
@@ -213,7 +213,6 @@ async fn test_list_agents() {
 
     // Verify each agent has required fields
     for agent in &agents {
-        assert!(!agent.id.is_empty(), "Agent ID should not be empty");
         assert!(!agent.name.is_empty(), "Agent name should not be empty");
         // agent_type should be a valid enum variant (already validated by serde)
     }

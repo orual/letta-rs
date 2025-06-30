@@ -20,7 +20,21 @@
       "Bash(RUST_BACKTRACE=1 cargo test test_local_server_agent_operations -- --nocapture)",
       "Bash(LETTA_API_KEY=\"sk-let-ZjJlYTE4ODYtNmRkZC00MDY4LThhNGMtZjQ3NGUxY2FmMTg1OmYxNWU1M2FhLTU4MDEtNGYwZi05MDFmLTgyYjg3ZDViNzlhZA==\" cargo test --test cloud_api_test test_cloud_agent_search -- --nocapture --ignored)",
       "Bash(LETTA_API_KEY=\"sk-let-ZjJlYTE4ODYtNmRkZC00MDY4LThhNGMtZjQ3NGUxY2FmMTg1OmYxNWU1M2FhLTU4MDEtNGYwZi05MDFmLTgyYjg3ZDViNzlhZA==\" cargo test --test cloud_api_test test_cloud_agent_count -- --nocapture --ignored)",
-      "Bash(docker logs:*)"
+      "Bash(docker logs:*)",
+      "Bash(docker exec:*)",
+      "Bash(RUST_BACKTRACE=1 cargo test test_simple_message 2 >& 1)",
+      "Bash(jq:*)",
+      "Bash(RUST_BACKTRACE=1 cargo test test_local_server_message_operations -- --nocapture --test-threads=1)",
+      "Bash(LETTA_API_KEY=$LETTA_API_KEY cargo test test_cloud_message_operations -- --ignored --nocapture)",
+      "Bash(if [ -n \"$LETTA_API_KEY\" ])",
+      "Bash(then LETTA_API_KEY=$LETTA_API_KEY cargo test test_cloud_message_operations -- --ignored --nocapture)",
+      "Bash(else echo \"LETTA_API_KEY not set, skipping cloud test\")",
+      "Bash(fi)",
+      "Bash(LETTA_API_KEY=\"sk-let-ZjJlYTE4ODYtNmRkZC00MDY4LThhNGMtZjQ3NGUxY2FmMTg1OmYxNWU1M2FhLTU4MDEtNGYwZi05MDFmLTgyYjg3ZDViNzlhZA==\" cargo test test_cloud_message_operations -- --ignored --nocapture)",
+      "WebFetch(domain:docs.rs)",
+      "Bash(RUST_LOG=debug cargo test --test sources_api_test test_source_file_operations -- --test-threads=1 --nocapture 2 >& 1)",
+      "Bash(export LETTA_API_KEY=\"sk-let-ZjJlYTE4ODYtNmRkZC00MDY4LThhNGMtZjQ3NGUxY2FmMTg1OmYxNWU1M2FhLTU4MDEtNGYwZi05MDFmLTgyYjg3ZDViNzlhZA==\")",
+      "Bash(mv:*)"
     ],
     "deny": []
   }

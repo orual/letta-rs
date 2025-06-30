@@ -233,6 +233,10 @@ pub enum LettaError {
     #[error("I/O error")]
     Io(#[from] std::io::Error),
 
+    /// URL encoding error.
+    #[error("URL encoding error")]
+    UrlEncoding(#[from] serde_urlencoded::ser::Error),
+
     /// Request timeout.
     #[error("Request timed out after {seconds} seconds")]
     RequestTimeout {
@@ -280,6 +284,7 @@ impl miette::Diagnostic for LettaError {
             Self::Config { .. } => Some(Box::new("letta::config")),
             Self::Url(_) => Some(Box::new("letta::url")),
             Self::Io(_) => Some(Box::new("letta::io")),
+            Self::UrlEncoding(_) => Some(Box::new("letta::url_encoding")),
             Self::RequestTimeout { .. } => Some(Box::new("letta::timeout")),
             Self::RateLimit { .. } => Some(Box::new("letta::rate_limit")),
             Self::NotFound { .. } => Some(Box::new("letta::not_found")),
@@ -370,7 +375,7 @@ impl LettaError {
     }
 
     /// Create a new API error from response body.
-    /// Automatically parses and structures the error body.
+    /// Automatically parses and structures the error body and maps to specific error types.
     pub fn from_response(status: u16, body_str: String) -> Self {
         let body = ErrorBody::from_response(&body_str);
 
@@ -382,11 +387,70 @@ impl LettaError {
         // Extract error code from structured body
         let code = body.code();
 
-        Self::Api {
-            status,
-            message,
-            code,
-            body,
+        // Map status codes to specific error types
+        match status {
+            401 => {
+                // Check if we have an UnauthorizedError structure
+                if let ErrorBody::Unauthorized(_) = &body {
+                    Self::Api {
+                        status,
+                        message,
+                        code,
+                        body,
+                    }
+                } else {
+                    Self::Auth { message }
+                }
+            }
+            404 => {
+                // Try to extract resource info from the message
+                // Common patterns: "Agent not found", "Tool with ID xxx not found", etc.
+                if let Some(resource_info) = Self::extract_resource_info(&message) {
+                    Self::NotFound {
+                        resource_type: resource_info.0,
+                        id: resource_info.1,
+                    }
+                } else {
+                    Self::Api {
+                        status,
+                        message,
+                        code,
+                        body,
+                    }
+                }
+            }
+            422 => {
+                // Validation error
+                if let Some(field) = Self::extract_validation_field(&message, &body) {
+                    Self::Validation {
+                        message,
+                        field: Some(field),
+                    }
+                } else {
+                    Self::Validation {
+                        message,
+                        field: None,
+                    }
+                }
+            }
+            429 => {
+                // Rate limit - try to extract retry-after from headers or body
+                let retry_after = Self::extract_retry_after(&body);
+                Self::RateLimit { retry_after }
+            }
+            408 | 504 => {
+                // Timeout errors
+                Self::RequestTimeout { seconds: 60 } // Default timeout
+            }
+            _ => {
+                // Default to generic API error
+                Self::Api {
+                    status,
+                    message,
+                    code,
+                    body,
+                }
+            }
         }
     }
 
@@ -530,6 +594,7 @@ impl LettaError {
     pub fn is_validation_error(&self) -> bool {
         match self {
             Self::Api { body, .. } => body.is_validation_error(),
+            Self::Validation { .. } => true,
             _ => false,
         }
     }
@@ -542,6 +607,106 @@ impl LettaError {
                 ..
             } => Some((&err.message, &err.details, &err.ownership)),
             _ => None,
+        }
+    }
+
+    /// Extract resource type and ID from a 404 error message.
+    /// Handles patterns like:
+    /// - "Agent not found"
+    /// - "Agent with ID xxx not found"
+    /// - "Tool 'xxx' not found"
+    /// - "No source found with ID: xxx"
+    fn extract_resource_info(message: &str) -> Option<(String, String)> {
+        let lower = message.to_lowercase();
+
+        // Pattern: "X not found" or variants with IDs
+        if let Some(not_found_pos) = lower.find(" not found") {
+            let prefix = &message[..not_found_pos];
+
+            // Try to extract ID from patterns like "with ID xxx" or "'xxx'"
+            if let Some(id_start) = prefix.find(" with ID ") {
+                let id_part = &prefix[id_start + 9..];
+                let id = id_part
+                    .trim()
+                    .trim_matches('"')
+                    .trim_matches('\'')
+                    .to_string();
+                let resource = prefix[..id_start].trim().to_string();
+                return Some((resource, id));
+            } else if let Some(quote_start) = prefix.rfind('\'') {
+                // Handle pattern like "Tool 'tool_name' not found"
+                if let Some(prev_quote) = prefix[..quote_start].rfind('\'') {
+                    let id = prefix[prev_quote + 1..quote_start].to_string();
+                    let resource = prefix[..prev_quote].trim().to_string();
+                    return Some((resource, id));
+                }
+            } else {
+                // Simple pattern like "Agent not found" - no ID
+                let resource = prefix.trim().to_string();
+                return Some((resource, String::new()));
+            }
+        }
+
+        // Handle patterns like "No source found with ID: xxx"
+        // This pattern has "found" but not immediately followed by "not found"
+        if lower.contains(" found ") && lower.contains(" with id:") {
+            // Find the ID after the colon
+            if let Some(colon_pos) = message.find(':') {
+                let id = message[colon_pos + 1..].trim().to_string();
+
+                // Find the resource type (word before "found")
+                let before_colon = &message[..colon_pos];
+                let words: Vec<&str> = before_colon.split_whitespace().collect();
+                for (i, word) in words.iter().enumerate() {
+                    if word.to_lowercase() == "found" && i > 0 {
+                        return Some((words[i - 1].to_string(), id));
+                    }
+                }
+            }
+        }
+
+        None
+    }
+
+    /// Extract field name from validation error message or body.
+    fn extract_validation_field(message: &str, body: &ErrorBody) -> Option<String> {
+        // Check if the body has field information in JSON
+        if let ErrorBody::Json(json) = body {
+            if let Some(field) = json.get("field").and_then(|v| v.as_str()) {
+                return Some(field.to_string());
+            }
+            // Check for validation_errors structure
+            if let Some(errors) = json.get("validation_errors").and_then(|v| v.as_object()) {
+                // Return the first field with an error
+                if let Some(field) = errors.keys().next() {
+                    return Some(field.clone());
+                }
+            }
+        }
+
+        // Try to extract from message patterns like "Field 'xxx' is required"
+        if message.contains("Field '") {
+            if let Some(start) = message.find("Field '") {
+                let after_field = &message[start + 7..];
+                if let Some(end) = after_field.find('\'') {
+                    return Some(after_field[..end].to_string());
+                }
+            }
+        }
+
+        None
+    }
+
+    /// Extract retry-after value from error body.
+    fn extract_retry_after(body: &ErrorBody) -> Option<u64> {
+        if let ErrorBody::Json(json) = body {
+            // Common fields for retry-after
+            json.get("retry_after")
+                .or_else(|| json.get("retryAfter"))
+                .or_else(|| json.get("retry-after"))
+                .and_then(|v| v.as_u64())
+        } else {
+            None
         }
     }
 }
@@ -642,7 +807,7 @@ mod tests {
         assert!(err.is_validation_error());
         assert_eq!(
             err.to_string(),
-            "API error 422: 1 validation error for Tool"
+            "Validation error: 1 validation error for Tool"
         );
 
         // Test plain text error
@@ -730,7 +895,129 @@ mod tests {
         let validation_error = r#"{"detail":"1 validation error for Tool\n  Value error, 'close_file' is not a user-defined function in module 'letta.functions.function_sets.files' [type=value_error, input_value=<letta.orm.tool.Tool object at 0x7ac389d9c860>, input_type=Tool]\n    For further information visit https://errors.pydantic.dev/2.11/v/value_error"}"#;
 
         let err = LettaError::from_response(500, validation_error.to_string());
+        // This is a 500 error that contains validation error details in the body
+        assert!(matches!(err, LettaError::Api { .. }));
         assert!(err.is_validation_error());
         assert!(err.to_string().contains("validation error"));
+    }
+
+    #[test]
+    fn test_status_specific_error_mapping() {
+        // Test 401 -> Auth error
+        let err = LettaError::from_response(401, "Invalid API key".to_string());
+        assert!(matches!(err, LettaError::Auth { .. }));
+
+        // Test 404 -> NotFound error with resource extraction
+        let err = LettaError::from_response(404, "Agent with ID agent-123 not found".to_string());
+        match err {
+            LettaError::NotFound { resource_type, id } => {
+                assert_eq!(resource_type, "Agent");
+                assert_eq!(id, "agent-123");
+            }
+            _ => panic!("Expected NotFound error"),
+        }
+
+        // Test 404 with quotes
+        let err = LettaError::from_response(404, "Tool 'calculator' not found".to_string());
+        match err {
+            LettaError::NotFound { resource_type, id } => {
+                assert_eq!(resource_type, "Tool");
+                assert_eq!(id, "calculator");
+            }
+            _ => panic!("Expected NotFound error"),
+        }
+
+        // Test 422 -> Validation error
+        let err = LettaError::from_response(422, "Field 'name' is required".to_string());
+        match err {
+            LettaError::Validation { message, field } => {
+                assert!(message.contains("Field 'name' is required"));
+                assert_eq!(field, Some("name".to_string()));
+            }
+            _ => panic!("Expected Validation error"),
+        }
+
+        // Test 429 -> RateLimit error
+        let err = LettaError::from_response(429, r#"{"retry_after": 60}"#.to_string());
+        match err {
+            LettaError::RateLimit { retry_after } => {
+                assert_eq!(retry_after, Some(60));
+            }
+            _ => panic!("Expected RateLimit error"),
+        }
+
+        // Test 408/504 -> RequestTimeout
+        let err = LettaError::from_response(408, "Request timeout".to_string());
+        assert!(matches!(err, LettaError::RequestTimeout { .. }));
+
+        let err = LettaError::from_response(504, "Gateway timeout".to_string());
+        assert!(matches!(err, LettaError::RequestTimeout { .. }));
+    }
+
+    #[test]
+    fn test_extract_resource_info() {
+        // Test various patterns
+        let cases = vec![
+            ("Agent not found", Some(("Agent", ""))),
+            (
+                "Agent with ID agent-123 not found",
+                Some(("Agent", "agent-123")),
+            ),
+            ("Tool 'my_tool' not found", Some(("Tool", "my_tool"))),
+            (
+                "No source found with ID: source-456",
+                Some(("source", "source-456")),
+            ),
+            ("Something else entirely", None),
+        ];
+
+        for (message, expected) in cases {
+            let result = LettaError::extract_resource_info(message);
+            match (result.as_ref(), expected) {
+                (Some((res_type, id)), Some((exp_type, exp_id))) => {
+                    assert_eq!(
+                        res_type, exp_type,
+                        "Resource type mismatch for: {}",
+                        message
+                    );
+                    assert_eq!(id, exp_id, "ID mismatch for: {}", message);
+                }
+                (None, None) => {}
+                _ => {
+                    eprintln!("Result: {:?}, Expected: {:?}", result, expected);
+                    panic!("Mismatch for message: {}", message);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_extract_validation_field() {
+        let body = ErrorBody::Text("".to_string());
+        assert_eq!(
+            LettaError::extract_validation_field("Field 'name' is required", &body),
+            Some("name".to_string())
+        );
+
+        // Test JSON body with field
+        let json_body = ErrorBody::Json(serde_json::json!({
+            "field": "email",
+            "message": "Invalid email format"
+        }));
+        assert_eq!(
+            LettaError::extract_validation_field("Invalid email format", &json_body),
+            Some("email".to_string())
+        );
+
+        // Test validation_errors structure
+        let json_body = ErrorBody::Json(serde_json::json!({
+            "validation_errors": {
+                "password": ["Too short"],
+                "username": ["Already taken"]
+            }
+        }));
+        let field = LettaError::extract_validation_field("Validation failed", &json_body);
+        assert!(field.is_some());
+        assert!(field == Some("password".to_string()) || field == Some("username".to_string()));
     }
 }

@@ -1,9 +1,8 @@
 //! Source-related types.
 
 use crate::types::agent::EmbeddingConfig;
-use crate::types::common::{Metadata, Timestamp};
+use crate::types::common::{LettaId, Metadata, Timestamp};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 /// File processing status.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -11,25 +10,63 @@ use std::collections::HashMap;
 pub enum FileProcessingStatus {
     /// File is pending processing.
     Pending,
-    /// File is being processed.
-    Processing,
+    /// File is being parsed.
+    Parsing,
+    /// File is being embedded.
+    Embedding,
     /// File processing completed.
     Completed,
     /// File processing failed.
-    Failed,
+    Error,
 }
 
 /// File metadata.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FileMetadata {
+    /// File ID.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<LettaId>,
+    /// Organization ID.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub organization_id: Option<LettaId>,
+    /// Source ID this file belongs to.
+    pub source_id: LettaId,
     /// File name.
-    pub file_name: String,
-    /// File type.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub file_name: Option<String>,
+    /// File path.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub file_path: Option<String>,
+    /// File type (MIME type).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub file_type: Option<String>,
     /// File size in bytes.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub file_size: Option<u64>,
+    pub file_size: Option<i64>,
+    /// File creation date.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub file_creation_date: Option<String>,
+    /// File last modified date.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub file_last_modified_date: Option<String>,
+    /// Processing status.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub processing_status: Option<FileProcessingStatus>,
+    /// Error message if processing failed.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error_message: Option<String>,
+    /// When the file was created in the database.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub created_at: Option<Timestamp>,
+    /// When the file was last updated in the database.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub updated_at: Option<Timestamp>,
+    /// Whether the file is deleted.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_deleted: Option<bool>,
+    /// Full file content (optional, large).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub content: Option<String>,
 }
 
 /// Data source.
@@ -37,7 +74,7 @@ pub struct FileMetadata {
 pub struct Source {
     /// Source ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<String>,
+    pub id: Option<LettaId>,
     /// Source name.
     pub name: String,
     /// Source description.
@@ -53,10 +90,10 @@ pub struct Source {
     pub metadata: Option<Metadata>,
     /// Created by user ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub created_by_id: Option<String>,
+    pub created_by_id: Option<LettaId>,
     /// Last updated by user ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub last_updated_by_id: Option<String>,
+    pub last_updated_by_id: Option<LettaId>,
     /// When the source was created.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub created_at: Option<Timestamp>,
@@ -65,75 +102,52 @@ pub struct Source {
     pub updated_at: Option<Timestamp>,
 }
 
-/// Source file representation.
+/// Source count response.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SourceFile {
-    /// File ID.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub file_id: Option<String>,
-    /// File data (base64 encoded).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub file_data: Option<String>,
-    /// File name.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub filename: Option<String>,
+pub struct SourceCounts {
+    /// Number of sources.
+    pub count: i32,
 }
 
-/// File upload wrapper.
+/// File upload response.
+/// Can be either a job (local server) or file metadata (cloud).
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
-pub enum FileUpload {
-    /// File upload.
-    File {
-        /// File details.
-        file: SourceFile,
-    },
+#[serde(untagged)]
+pub enum FileUploadResponse {
+    /// Job response (local server).
+    Job(FileUploadJob),
+    /// Direct file metadata (cloud API).
+    FileMetadata(FileMetadata),
 }
 
-/// Passage stored in archival memory.
+/// File upload job response.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Passage {
-    /// Passage ID.
+pub struct FileUploadJob {
+    /// Job ID.
+    pub id: LettaId,
+    /// Job status.
+    pub status: String,
+    /// Job metadata.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<String>,
-    /// The text of the passage.
-    pub text: String,
-    /// The embedding of the passage.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub embedding: Option<Vec<f32>>,
-    /// Embedding configuration.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub embedding_config: Option<EmbeddingConfig>,
-    /// Agent ID associated with this passage.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub agent_id: Option<String>,
-    /// Source ID.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub source_id: Option<String>,
-    /// File ID.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub file_id: Option<String>,
-    /// File name (for source passages).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub file_name: Option<String>,
-    /// Passage metadata.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<Metadata>,
-    /// Whether this passage is deleted.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub is_deleted: Option<bool>,
-    /// Created by user ID.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub created_by_id: Option<String>,
-    /// Last updated by user ID.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub last_updated_by_id: Option<String>,
-    /// When the passage was created.
+    pub metadata: Option<FileUploadMetadata>,
+    /// Created at timestamp.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub created_at: Option<Timestamp>,
-    /// When the passage was last updated.
+    /// Updated at timestamp.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub updated_at: Option<Timestamp>,
+}
+
+/// Metadata for file upload job.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FileUploadMetadata {
+    /// Upload type.
+    #[serde(rename = "type")]
+    pub upload_type: String,
+    /// File name.
+    pub filename: String,
+    /// Source ID.
+    pub source_id: LettaId,
 }
 
 /// Create source request.
@@ -141,52 +155,74 @@ pub struct Passage {
 pub struct CreateSourceRequest {
     /// Source name.
     pub name: String,
+    /// Embedding handle (e.g., "openai/text-embedding-ada-002").
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub embedding: Option<String>,
+    /// Embedding chunk size.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub embedding_chunk_size: Option<i32>,
+    /// Embedding configuration (legacy, prefer using `embedding`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub embedding_config: Option<EmbeddingConfig>,
     /// Source description.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     /// Instructions for how to use the source.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub instructions: Option<String>,
-    /// Embedding configuration.
-    pub embedding_config: EmbeddingConfig,
     /// Source metadata.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub metadata: Option<Metadata>,
 }
 
-/// Query parameters for listing sources.
+/// Update source request.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct ListSourcesParams {
+pub struct UpdateSourceRequest {
+    /// Source name.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    /// Source description.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    /// Instructions for how to use the source.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub instructions: Option<String>,
+    /// Source metadata.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<Metadata>,
+    /// Embedding configuration.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub embedding_config: Option<EmbeddingConfig>,
+}
+
+/// Query parameters for listing files.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct ListFilesParams {
     /// Limit number of results.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub limit: Option<u32>,
-    /// Pagination cursor (before).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub before: Option<String>,
+    pub limit: Option<i32>,
     /// Pagination cursor (after).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub after: Option<String>,
+    /// Include file content.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub include_content: Option<bool>,
 }
 
-/// Upload file to source request.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UploadFileToSourceRequest {
-    /// File data or reference.
-    pub file: FileUpload,
+/// Query parameters for getting file metadata.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct GetFileParams {
+    /// Include file content.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub include_content: Option<bool>,
 }
 
 /// List passages parameters.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ListPassagesParams {
-    /// Filter by agent ID.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub agent_id: Option<String>,
-    /// Filter by source ID.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub source_id: Option<String>,
     /// Limit number of results.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub limit: Option<u32>,
+    pub limit: Option<i32>,
     /// Pagination cursor (before).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub before: Option<String>,
@@ -199,11 +235,13 @@ pub struct ListPassagesParams {
 mod tests {
     use super::*;
     use crate::types::agent::EmbeddingEndpointType;
+    use std::collections::HashMap;
+    use std::str::FromStr;
 
     #[test]
     fn test_source_serialization() {
         let source = Source {
-            id: Some("source-123".to_string()),
+            id: Some(LettaId::from_str("source-550e8400-e29b-41d4-a716-446655440002").unwrap()),
             name: "documents".to_string(),
             description: Some("Document collection".to_string()),
             instructions: Some("Use for general knowledge".to_string()),
@@ -230,40 +268,28 @@ mod tests {
     }
 
     #[test]
-    fn test_passage_serialization() {
-        let passage = Passage {
-            id: Some("passage-123".to_string()),
-            text: "This is a test passage.".to_string(),
-            embedding: Some(vec![0.1, 0.2, 0.3]),
-            embedding_config: None,
-            agent_id: Some("agent-456".to_string()),
-            source_id: Some("source-789".to_string()),
-            file_id: None,
-            file_name: None,
-            metadata: None,
-            is_deleted: Some(false),
-            created_by_id: None,
-            last_updated_by_id: None,
+    fn test_file_metadata_serialization() {
+        let file_metadata = FileMetadata {
+            id: Some(LettaId::from_str("file-550e8400-e29b-41d4-a716-446655440000").unwrap()),
+            organization_id: None,
+            source_id: LettaId::from_str("source-550e8400-e29b-41d4-a716-446655440001").unwrap(),
+            file_name: Some("test.txt".to_string()),
+            file_path: Some("/path/to/test.txt".to_string()),
+            file_type: Some("text/plain".to_string()),
+            file_size: Some(1024),
+            file_creation_date: None,
+            file_last_modified_date: None,
+            processing_status: Some(FileProcessingStatus::Completed),
+            error_message: None,
             created_at: Some(chrono::Utc::now()),
             updated_at: None,
+            is_deleted: Some(false),
+            content: None,
         };
 
-        let json = serde_json::to_string(&passage).unwrap();
-        let deserialized: Passage = serde_json::from_str(&json).unwrap();
-        assert_eq!(passage.text, deserialized.text);
-    }
-
-    #[test]
-    fn test_file_upload_serialization() {
-        let file_upload = FileUpload::File {
-            file: SourceFile {
-                file_id: Some("file-123".to_string()),
-                file_data: Some("base64encodeddata".to_string()),
-                filename: Some("test.txt".to_string()),
-            },
-        };
-
-        let json = serde_json::to_string(&file_upload).unwrap();
-        assert!(json.contains("\"type\":\"file\""));
+        let json = serde_json::to_string(&file_metadata).unwrap();
+        let deserialized: FileMetadata = serde_json::from_str(&json).unwrap();
+        assert_eq!(file_metadata.source_id, deserialized.source_id);
+        assert_eq!(file_metadata.file_name, deserialized.file_name);
     }
 }

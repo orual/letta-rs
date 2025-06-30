@@ -1,6 +1,6 @@
 //! Tool-related types.
 
-use crate::types::common::{Metadata, Timestamp};
+use crate::types::common::{LettaId, Metadata, Timestamp};
 use serde::{Deserialize, Serialize};
 
 /// Tool type enum.
@@ -13,9 +13,30 @@ pub enum ToolType {
     /// Memory core tools.
     #[serde(rename = "letta_memory_core")]
     LettaMemoryCore,
-    /// File core tools.
-    #[serde(rename = "letta_file_core")]
-    LettaFileCore,
+    /// Multi-agent core tools.
+    #[serde(rename = "letta_multi_agent_core")]
+    LettaMultiAgentCore,
+    /// Sleeptime core tools.
+    #[serde(rename = "letta_sleeptime_core")]
+    LettaSleeptimeCore,
+    /// Voice sleeptime core tools.
+    #[serde(rename = "letta_voice_sleeptime_core")]
+    LettaVoiceSleeptimeCore,
+    /// Built-in tools.
+    #[serde(rename = "letta_builtin")]
+    LettaBuiltin,
+    /// Files core tools.
+    #[serde(rename = "letta_files_core")]
+    LettaFilesCore,
+    /// External Composio tools.
+    #[serde(rename = "external_composio")]
+    ExternalComposio,
+    /// External LangChain tools.
+    #[serde(rename = "external_langchain")]
+    ExternalLangchain,
+    /// External MCP tools.
+    #[serde(rename = "external_mcp")]
+    ExternalMcp,
     /// Custom tools.
     Custom,
     /// Other tool types.
@@ -51,7 +72,7 @@ pub struct PipRequirement {
 pub struct Tool {
     /// Tool ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<String>,
+    pub id: Option<LettaId>,
     /// Tool type.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tool_type: Option<ToolType>,
@@ -63,7 +84,7 @@ pub struct Tool {
     pub source_type: Option<SourceType>,
     /// Organization ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub organization_id: Option<String>,
+    pub organization_id: Option<LettaId>,
     /// Tool name.
     pub name: String,
     /// Tags.
@@ -86,10 +107,10 @@ pub struct Tool {
     pub pip_requirements: Option<Vec<PipRequirement>>,
     /// Created by user ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub created_by_id: Option<String>,
+    pub created_by_id: Option<LettaId>,
     /// Last updated by user ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub last_updated_by_id: Option<String>,
+    pub last_updated_by_id: Option<LettaId>,
     /// Tool metadata.
     #[serde(skip_serializing_if = "Option::is_none", rename = "metadata_")]
     pub metadata: Option<Metadata>,
@@ -104,11 +125,12 @@ pub struct Tool {
 /// Tool creation request.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct CreateToolRequest {
-    /// Tool name.
-    pub name: String,
     /// Tool description.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
+    /// Tags.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tags: Option<Vec<String>>,
     /// Source code.
     pub source_code: String,
     /// Source type.
@@ -117,9 +139,9 @@ pub struct CreateToolRequest {
     /// JSON schema.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub json_schema: Option<serde_json::Value>,
-    /// Tags.
+    /// Args JSON schema.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub tags: Option<Vec<String>>,
+    pub args_json_schema: Option<serde_json::Value>,
     /// Return character limit.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub return_char_limit: Option<u32>,
@@ -140,16 +162,43 @@ pub struct ListToolsParams {
     /// Pagination cursor (after).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub after: Option<String>,
+    /// Filter by tool name.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+}
+
+/// Tool update request.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct UpdateToolRequest {
+    /// Tool description.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    /// Source code.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source_code: Option<String>,
+    /// Tags.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tags: Option<Vec<String>>,
+    /// Return character limit.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub return_char_limit: Option<u32>,
+    /// Pip requirements.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pip_requirements: Option<Vec<PipRequirement>>,
+    /// Tool metadata.
+    #[serde(skip_serializing_if = "Option::is_none", rename = "metadata_")]
+    pub metadata: Option<Metadata>,
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::str::FromStr;
 
     #[test]
     fn test_tool_serialization() {
         let tool = Tool {
-            id: Some("tool-123".to_string()),
+            id: Some(LettaId::from_str("tool-550e8400-e29b-41d4-a716-446655440000").unwrap()),
             tool_type: Some(ToolType::Custom),
             name: "calculator".to_string(),
             description: Some("Basic calculator tool".to_string()),
@@ -192,12 +241,15 @@ mod tests {
             serde_json::to_string(&ToolType::Custom).unwrap(),
             "\"custom\""
         );
+        assert_eq!(
+            serde_json::to_string(&ToolType::LettaFilesCore).unwrap(),
+            "\"letta_files_core\""
+        );
     }
 
     #[test]
     fn test_create_tool_request() {
         let request = CreateToolRequest {
-            name: "my_tool".to_string(),
             description: Some("My custom tool".to_string()),
             source_code: "def my_tool(): pass".to_string(),
             source_type: Some(SourceType::Python),
@@ -208,9 +260,10 @@ mod tests {
             tags: Some(vec!["custom".to_string()]),
             return_char_limit: None,
             pip_requirements: None,
+            args_json_schema: None,
         };
 
         let json = serde_json::to_string(&request).unwrap();
-        assert!(json.contains("\"name\":\"my_tool\""));
+        assert!(json.contains("\"source_code\":\"def my_tool(): pass\""));
     }
 }

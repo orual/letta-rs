@@ -1,23 +1,25 @@
 //! Simple message API test.
 
+use letta_rs::types::{AgentType, CreateAgentRequest};
 use letta_rs::{ClientConfig, LettaClient};
 
 #[tokio::test]
 async fn test_simple_message_list() {
-    // Copy exact logic from working agent test
     let config = ClientConfig::new("http://localhost:8283").unwrap();
     let client = LettaClient::new(config).unwrap();
 
-    // Test 1: List agents (exactly like working test)
-    println!("Testing agent list...");
-    let agents = client.agents().list(None).await.unwrap();
-    println!("Found {} agents", agents.len());
-    assert!(!agents.is_empty(), "Server should have at least one agent");
+    // Create a test agent
+    println!("Creating test agent for simple message test...");
+    let create_request = CreateAgentRequest::builder()
+        .name("Simple Test Agent")
+        .agent_type(AgentType::MemGPT)
+        .model("letta/letta-free")
+        .embedding("letta/letta-free")
+        .build();
 
-    println!("✅ Agent list works! Now trying messages...");
-
-    // Use a specific working agent ID instead of first agent
-    let agent_id = "agent-44283816-340a-4ec7-939b-5d972085e490";
+    let agent = client.agents().create(create_request).await.unwrap();
+    let agent_id = &agent.id;
+    println!("Created test agent: {} ({})", agent.name, agent_id);
     let messages = client.messages().list(agent_id, None).await.unwrap();
     println!("Found {} messages for agent {}", messages.len(), agent_id);
 
@@ -68,4 +70,11 @@ async fn test_simple_message_list() {
     println!("  Received {} messages", response.messages.len());
 
     println!("✅ Message API works too!");
+
+    // Cleanup: delete the test agent
+    println!("Cleaning up test agent...");
+    match client.agents().delete(agent_id).await {
+        Ok(_) => println!("✅ Test agent deleted"),
+        Err(e) => println!("Warning: Failed to delete test agent: {:?}", e),
+    }
 }

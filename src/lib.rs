@@ -9,20 +9,27 @@
 //! ## Quick Start
 //!
 //! ```rust,no_run
-//! use letta_rs::{LettaClient, ClientConfig};
+//! use letta_rs::{LettaClient, LettaEnvironment};
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!     // Connect to local Letta server
-//!     let client = LettaClient::new(
-//!         ClientConfig::new("http://localhost:8283")?
-//!     )?;
+//!     let client = LettaClient::local()?;
 //!     
-//!     // List all agents (note: not yet implemented)
-//!     // let agents = client.agents().list().await?;
-//!     // println!("Found {} agents", agents.len());
+//!     // Or connect to Letta Cloud with an API token
+//!     // let client = LettaClient::cloud("your-api-token")?;
 //!     
-//!     println!("Client created successfully!");
+//!     // Or use the builder for custom configuration
+//!     // let client = LettaClient::builder()
+//!     //     .environment(LettaEnvironment::Cloud)
+//!     //     .auth(letta_rs::auth::AuthConfig::bearer("your-token"))
+//!     //     .base_url("https://custom.letta.com")  // optional override
+//!     //     .build()?;
+//!     
+//!     // List all agents
+//!     let agents = client.agents().list(None).await?;
+//!     println!("Found {} agents", agents.len());
+//!     
 //!     Ok(())
 //! }
 //! ```
@@ -59,6 +66,7 @@
 pub mod api;
 pub mod auth;
 pub mod client;
+pub mod environment;
 pub mod error;
 pub mod streaming;
 pub mod types;
@@ -66,5 +74,9 @@ pub mod utils;
 
 // Re-export main types for convenience
 pub use client::{ClientBuilder, ClientConfig, LettaClient};
+pub use environment::LettaEnvironment;
 pub use error::{LettaError, LettaResult};
 pub use types::*;
+
+// Re-export streaming types
+pub use api::messages::{MessageStream, StreamingEvent};

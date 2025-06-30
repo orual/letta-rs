@@ -1,11 +1,175 @@
 //! Common types used across the Letta API.
 
 use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::HashMap;
+use std::fmt;
+use std::str::FromStr;
+use uuid::Uuid;
 
-/// Unique identifier for resources in the Letta API.
-/// Format: "{prefix}-{uuid}" (e.g., "agent-123e4567-e89b-12d3-a456-426614174000")
+/// Letta resource identifier that can be either a bare UUID or a prefixed UUID.
+///
+/// # Examples
+///
+/// ```
+/// use letta_rs::types::LettaId;
+/// use std::str::FromStr;
+///
+/// // Bare UUID
+/// let id1 = LettaId::from_str("550e8400-e29b-41d4-a716-446655440000").unwrap();
+///
+/// // Prefixed UUID
+/// let id2 = LettaId::from_str("agent-550e8400-e29b-41d4-a716-446655440000").unwrap();
+///
+/// // Get the UUID part
+/// assert_eq!(id1.uuid(), id2.uuid());
+/// ```
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct LettaId {
+    /// Optional prefix (e.g., "agent", "run", "tool")
+    prefix: Option<String>,
+    /// The UUID part
+    uuid: Uuid,
+}
+
+impl LettaId {
+    /// Create a new ID with a prefix.
+    pub fn new_prefixed(prefix: impl Into<String>, uuid: Uuid) -> Self {
+        Self {
+            prefix: Some(prefix.into()),
+            uuid,
+        }
+    }
+
+    /// Create a new ID without a prefix (bare UUID).
+    pub fn new_bare(uuid: Uuid) -> Self {
+        Self { prefix: None, uuid }
+    }
+
+    /// Get the prefix, if any.
+    pub fn prefix(&self) -> Option<&str> {
+        self.prefix.as_deref()
+    }
+
+    /// Get the UUID part.
+    pub fn uuid(&self) -> &Uuid {
+        &self.uuid
+    }
+
+    /// Check if this is a bare UUID (no prefix).
+    pub fn is_bare(&self) -> bool {
+        self.prefix.is_none()
+    }
+
+    /// Convert to string representation.
+    pub fn as_str(&self) -> String {
+        match &self.prefix {
+            Some(prefix) => format!("{}-{}", prefix, self.uuid),
+            None => self.uuid.to_string(),
+        }
+    }
+}
+
+impl fmt::Display for LettaId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+impl FromStr for LettaId {
+    type Err = LettaIdError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        // Try to parse as bare UUID first
+        if let Ok(uuid) = Uuid::from_str(s) {
+            return Ok(Self::new_bare(uuid));
+        }
+
+        // Try to parse as prefixed UUID
+        // UUIDs have a specific format with dashes at positions 8, 13, 18, 23
+        // So we need to check if the string has the pattern: prefix-uuid
+        // where uuid is 36 characters long (32 hex + 4 dashes)
+        if s.len() > 36 {
+            let uuid_start = s.len() - 36;
+            if uuid_start > 0 && s.chars().nth(uuid_start - 1) == Some('-') {
+                let potential_uuid = &s[uuid_start..];
+                if let Ok(uuid) = Uuid::from_str(potential_uuid) {
+                    let prefix = &s[..uuid_start - 1];
+                    // Basic validation: prefix should not be empty and should be alphanumeric + underscores
+                    // But not allow prefixes that start/end with dash or are just dashes
+                    if !prefix.is_empty()
+                        && !prefix.starts_with('-')
+                        && !prefix.ends_with('-')
+                        && prefix.chars().any(|c| c.is_alphanumeric())
+                        && prefix
+                            .chars()
+                            .all(|c| c.is_alphanumeric() || c == '_' || c == '-')
+                    {
+                        return Ok(Self::new_prefixed(prefix, uuid));
+                    }
+                }
+            }
+        }
+
+        Err(LettaIdError::InvalidFormat(s.to_string()))
+    }
+}
+
+impl Serialize for LettaId {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&self.as_str())
+    }
+}
+
+impl<'de> Deserialize<'de> for LettaId {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        Self::from_str(&s).map_err(serde::de::Error::custom)
+    }
+}
+
+/// Error type for LettaId parsing.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum LettaIdError {
+    /// Invalid ID format.
+    InvalidFormat(String),
+}
+
+impl fmt::Display for LettaIdError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::InvalidFormat(s) => write!(f, "Invalid LettaId format: {}", s),
+        }
+    }
+}
+
+impl std::error::Error for LettaIdError {}
+
+// Convenience conversions for easier API usage
+impl From<LettaId> for String {
+    fn from(id: LettaId) -> Self {
+        id.as_str()
+    }
+}
+
+// Allow using &LettaId where &str is expected by converting to string
+impl<'a> From<&'a LettaId> for String {
+    fn from(id: &'a LettaId) -> Self {
+        id.as_str()
+    }
+}
+
+/// Type alias for optional LettaId fields in structs.
+/// This helps with backwards compatibility and allows easier migration.
+pub type OptionalId = Option<LettaId>;
+
+/// Convenience type alias for legacy code compatibility.
 pub type ResourceId = String;
 
 /// Timestamp type used throughout the API.
@@ -298,5 +462,65 @@ mod tests {
         assert_eq!(params.sort_by.as_deref(), Some("created_at"));
         assert!(matches!(params.sort_order, Some(SortOrder::Asc)));
         assert_eq!(params.pagination.limit, Some(20));
+    }
+
+    #[test]
+    fn test_letta_id_bare_uuid() {
+        let uuid_str = "550e8400-e29b-41d4-a716-446655440000";
+        let id = LettaId::from_str(uuid_str).unwrap();
+
+        assert!(id.is_bare());
+        assert_eq!(id.prefix(), None);
+        assert_eq!(id.as_str(), uuid_str);
+    }
+
+    #[test]
+    fn test_letta_id_prefixed() {
+        let prefixed_str = "agent-550e8400-e29b-41d4-a716-446655440000";
+        let id = LettaId::from_str(prefixed_str).unwrap();
+
+        assert!(!id.is_bare());
+        assert_eq!(id.prefix(), Some("agent"));
+        assert_eq!(id.as_str(), prefixed_str);
+    }
+
+    #[test]
+    fn test_letta_id_various_prefixes() {
+        let test_cases = vec![
+            "run-550e8400-e29b-41d4-a716-446655440000",
+            "tool-550e8400-e29b-41d4-a716-446655440000",
+            "source-550e8400-e29b-41d4-a716-446655440000",
+            "block-550e8400-e29b-41d4-a716-446655440000",
+            "memory_block-550e8400-e29b-41d4-a716-446655440000",
+        ];
+
+        for case in test_cases {
+            let id = LettaId::from_str(case).unwrap();
+            assert_eq!(id.as_str(), case);
+        }
+    }
+
+    #[test]
+    fn test_letta_id_invalid() {
+        let invalid_cases = vec![
+            "not-a-uuid",
+            "agent-not-a-uuid",
+            "-550e8400-e29b-41d4-a716-446655440000", // Empty prefix
+            "agent--550e8400-e29b-41d4-a716-446655440000", // Double dash
+        ];
+
+        for case in invalid_cases {
+            assert!(LettaId::from_str(case).is_err());
+        }
+    }
+
+    #[test]
+    fn test_letta_id_serialization() {
+        let id = LettaId::from_str("agent-550e8400-e29b-41d4-a716-446655440000").unwrap();
+        let json = serde_json::to_string(&id).unwrap();
+        assert_eq!(json, "\"agent-550e8400-e29b-41d4-a716-446655440000\"");
+
+        let deserialized: LettaId = serde_json::from_str(&json).unwrap();
+        assert_eq!(id, deserialized);
     }
 }

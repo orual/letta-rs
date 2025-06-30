@@ -235,45 +235,44 @@ Based on analysis of Python and TypeScript SDKs, our current Rust implementation
    - Source CRUD operations
    - File handling pipeline
 
-8. **Health & Infrastructure**
-   - `/v1/health` endpoint
-   - Better authentication patterns
 
 ### Phase 3: Advanced Features
 **Priority: MEDIUM - advanced use cases**
 
-9. **Groups & Multi-Agent**
+8. **Groups & Multi-Agent**
    - Multi-agent group conversations
    - Group management and coordination
 
-10. **Runs & Execution Management**
+9. **Runs & Execution Management**
     - Execution runs tracking
     - Run state management
 
-11. **Jobs & Steps** - async processing with feedback
+10. **Jobs & Steps** - async processing with feedback
     - Asynchronous job management
     - Step feedback and management
     - Background processing patterns
 
-12. **Advanced Streaming**
+11. **Advanced Streaming**
     - Token-level streaming refinements
     - Multiple concurrent streams
     - Stream error handling
 
-13. **Templates & Projects**
+12. **Templates & Projects**
     - Agent template system
     - Project management functionality
 
 ### Phase 4: Ecosystem Features
 **Priority: LOW - nice-to-have**
 
-14. **Batches & Telemetry**
+13. **Batches & Telemetry**
     - Batch job processing
     - Usage tracking and telemetry
 
-15. **Voice Integration**
+14. **Voice Integration**
     - Voice conversation support
     - Audio processing pipeline
+
+15. **Client scoped auth tokens for cloud API**
 
 16. **Comprehensive Type System**
     - Complete all missing types (~230 types)
@@ -283,7 +282,7 @@ Based on analysis of Python and TypeScript SDKs, our current Rust implementation
 ### Missing API Categories (22 total)
 Currently missing these major API endpoints:
 - Batches, Blocks, ClientSideAccessTokens, EmbeddingModels
-- Groups, Health, Identities, Jobs, Models, Projects
+- Groups, Identities, Jobs, Models, Projects
 - Providers, Runs, Steps, Tags, Telemetry, Templates, Voice
 - Plus nested sub-APIs under agents (context, tools, sources, etc.)
 
@@ -296,13 +295,106 @@ Currently missing these major API endpoints:
 
 ### Current API Coverage
 - **Agents**: 100% complete ✅ (all endpoints implemented and tested)
-- **Messages**: 0% complete
-- **Memory**: 10% complete (basic types only)
-- **Tools**: 5% complete (types only)
-- **Sources**: 5% complete (types only)
+- **Messages**: 95% complete ✅ (all endpoints including SSE streaming, update, async)
+  - Missing: Individual message GET/DELETE (API doesn't appear to have these)
+- **Memory**:
+  - Core Memory: 100% complete ✅ (all endpoints implemented and tested)
+  - Archival Memory: 100% complete ✅ (all endpoints implemented and tested)
+    - Note: PATCH endpoint has server-side bug (returns tuples instead of Passage objects)
+  - Memory Blocks: 5% complete (types only)
+- **Tools**: 100% complete ✅ (all endpoints including agent sub-API implemented and tested)
+- **Sources**: 100% complete ✅ (all endpoints including file uploads and agent sub-API implemented and tested)
+- **Type System**: 100% complete ✅ (LettaId type for all ID fields throughout the API)
+- **Error Handling**: 100% complete ✅ (status-specific error mapping with smart extraction)
+- **Environment Management**: 100% complete ✅ (Cloud vs Local with convenience constructors)
 - **All other categories**: 0% complete
 
+### Recent Improvements
+- ✅ Custom `LettaId` type for handling both bare UUIDs and prefixed UUIDs
+  - Automatically handles formats like "agent-550e8400-e29b-41d4-a716-446655440000"
+  - Seamless conversion to/from String for API calls
+  - Full serde support for JSON serialization
+- ✅ Message update functionality (PATCH)
+- ✅ Async message creation endpoint returning Run objects
+- ✅ Comprehensive error handling with detailed API error responses
+- ✅ Complete refactoring of all ID fields to use LettaId type throughout codebase
+- ✅ Status-specific error mapping (HTTP status codes to specific error types)
+  - 401 → Auth, 404 → NotFound, 422 → Validation, 429 → RateLimit, 408/504 → RequestTimeout
+  - Smart extraction of resource information from error messages
+  - Validation field extraction from 422 errors
+  - Retry-after header parsing for rate limits
+- ✅ Environment management system
+  - `LettaEnvironment` enum with Cloud and SelfHosted variants
+  - Convenience constructors: `LettaClient::cloud(token)` and `LettaClient::local()`
+  - Builder pattern for advanced configuration
+  - Automatic authentication handling based on environment
+
 Target: 90%+ API coverage following this roadmap.
+
+## Phase 1: Core Infrastructure ✅ COMPLETED
+
+Phase 1 has been completed! All core infrastructure is now in place:
+- ✅ All agent sub-APIs (core memory, archival memory, tools, sources)
+- ✅ Message API with SSE streaming support
+- ✅ Enhanced error handling with status-specific mapping
+- ✅ Environment management (Cloud vs Local)
+- ✅ Health endpoint implementation
+- ✅ Type-safe LettaId throughout the codebase
+
+For detailed Phase 1 implementation notes, see [PHASE1_ARCHIVE.md](./PHASE1_ARCHIVE.md).
+
+## Phase 2: Memory & Tool Systems
+
+### Goals
+Complete the memory block management system and enhance tool functionality to support advanced Letta features.
+
+### 1. Memory Blocks API (Priority: HIGH) ✅ COMPLETED
+- [x] GET `/v1/blocks/` - List all memory blocks
+- [x] POST `/v1/blocks/` - Create a new memory block
+- [x] GET `/v1/blocks/{block_id}` - Get a specific block
+- [x] PATCH `/v1/blocks/{block_id}` - Update a block
+- [x] DELETE `/v1/blocks/{block_id}` - Delete a block
+- [x] GET `/v1/blocks/count` - Get blocks count
+
+All endpoints implemented with:
+- Full CRUD operations
+- Filtering support (label, templates_only, name, identity_id, identifier_keys)
+- Metadata support
+- Comprehensive integration tests
+
+### 2. Tool Features (Priority: MEDIUM)
+#### Core Tool CRUD ✅ COMPLETE
+- [x] GET `/v1/tools/` - List all tools
+- [x] POST `/v1/tools/` - Create a new tool  
+- [x] GET `/v1/tools/{tool_id}` - Get a tool by ID
+- [x] PATCH `/v1/tools/{tool_id}` - Update a tool
+- [x] DELETE `/v1/tools/{tool_id}` - Delete a tool
+- [x] GET `/v1/tools/count` - Get tools count
+- [x] PUT `/v1/tools/` - Upsert a tool
+
+#### MCP Integration (TODO)
+- [ ] GET `/v1/tools/mcp/servers` - List all configured MCP servers
+- [ ] PUT `/v1/tools/mcp/servers` - Add a new MCP server
+- [ ] GET `/v1/tools/mcp/servers/{mcp_server_name}/tools` - List tools for a specific MCP server
+- [ ] POST `/v1/tools/mcp/servers/{mcp_server_name}/{mcp_tool_name}` - Add an MCP tool to Letta
+- [ ] DELETE `/v1/tools/mcp/servers/{mcp_server_name}` - Delete an MCP server
+- [ ] PATCH `/v1/tools/mcp/servers/{mcp_server_name}` - Update an MCP server configuration
+- [ ] POST `/v1/tools/mcp/servers/test` - Test an MCP server connection
+
+#### Composio Integration (TODO)
+- [ ] GET `/v1/tools/composio/apps` - List all Composio apps
+- [ ] GET `/v1/tools/composio/apps/{composio_app_name}/actions` - List actions for a specific Composio app
+- [ ] POST `/v1/tools/composio/{composio_action_name}` - Add a Composio tool to Letta
+
+#### Other
+- [ ] ~~POST `/v1/tools/from-function`~~ - Client-side feature (not an API endpoint)
+  - Could implement with PyO3/WASM in future for Rust function extraction
+
+### 3. Infrastructure Improvements (Priority: MEDIUM)
+- [ ] Add retry logic for transient failures (429, 503, etc.)
+- [ ] Implement request/response middleware for logging
+- [ ] Add request timeout configuration
+- [ ] Connection pooling optimization
 
 ### Endpoint Availability: Local vs Cloud
 
@@ -332,3 +424,50 @@ All agent endpoints work on both local and cloud except search, which is cloud-o
 - Template was designed for easy initialization via omnix: `nix run github:juspay/omnix -- init github:srid/letta-rs`
 - Implementation should match the official Letta API specification at docs.letta.com
 - **NEVER ignore a test without asking first and getting user approval**
+
+## TODO Management
+
+### Current TODO Status
+
+#### Completed ✅
+1. Create custom ID type for string-prefixed UUIDs
+2. Refactor all ID fields to use LettaId type
+3. Create status-specific error type mapping
+4. Add environment management (Cloud vs Local)
+
+#### In Progress 🚧
+- Implement health endpoint and infrastructure improvements
+
+#### Notes
+- All integration tests are now passing (cloud tests remain ignored as they require API keys)
+- Streaming tests pass locally when streaming is supported
+- Archival memory tests pass despite server-side bugs
+
+## Key Implementation Insights
+
+### ID Format
+Letta uses prefixed UUIDs throughout the API. Common prefixes include:
+- `agent-` for agent IDs
+- `message-` for message IDs
+- `tool-` for tool IDs
+- `source-` for source IDs
+- `block-` for memory block IDs
+- `passage-` for archival memory passage IDs
+- `run-` for async job run IDs
+- `file-` for file IDs
+
+The API accepts both bare UUIDs and prefixed UUIDs, but typically returns prefixed versions.
+
+### Known Server Issues
+1. **Archival Memory Update Bug**: The PATCH `/v1/agents/{id}/archival-memory/{memory_id}` endpoint has a server-side bug where it returns response data as tuples instead of proper Passage objects. This causes deserialization failures.
+2. **Embedding Requirements**: When updating archival memory text, the server requires embedding and embedding_config fields to be provided (even though they should be optional) because the embeddings need to match the updated text.
+
+### API Patterns
+1. **Redundant IDs**: Many update endpoints include the resource ID both in the URL path and the request body
+2. **Tool Names**: Tools can be referenced by both name (string) and ID when attaching to agents
+3. **Pagination**: All list endpoints support cursor-based pagination with `before`, `after`, and `limit` parameters
+4. **SSE Streaming**: Message streaming uses Server-Sent Events with automatic retry and proper error handling
+
+## Development Principles
+
+- NEVER ignore a test

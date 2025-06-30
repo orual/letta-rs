@@ -3,8 +3,9 @@
 use letta_rs::types::{
     AgentType, AgentsSearchRequest, CreateAgentRequest, ImportAgentRequest, ListAgentsParams,
 };
-use letta_rs::{ClientConfig, LettaClient};
+use letta_rs::{ClientConfig, LettaClient, LettaId};
 use std::path::Path;
+use std::str::FromStr;
 
 #[tokio::test]
 async fn test_local_server_agent_operations() {
@@ -21,11 +22,7 @@ async fn test_local_server_agent_operations() {
     // Test 2: Get a specific agent
     let first_agent = &agents[0];
     println!("Testing agent get for ID: {}", first_agent.id);
-    let agent = client
-        .agents()
-        .get(&first_agent.id.to_string())
-        .await
-        .unwrap();
+    let agent = client.agents().get(&first_agent.id).await.unwrap();
     assert_eq!(agent.id, first_agent.id);
 
     // Test 3: List with parameters
@@ -55,21 +52,13 @@ async fn test_local_server_agent_operations() {
     assert_eq!(created_agent.agent_type, AgentType::MemGPT);
 
     // Test 5: Verify the created agent exists
-    let retrieved_agent = client
-        .agents()
-        .get(&created_agent.id.to_string())
-        .await
-        .unwrap();
+    let retrieved_agent = client.agents().get(&created_agent.id).await.unwrap();
     assert_eq!(retrieved_agent.id, created_agent.id);
     assert_eq!(retrieved_agent.name, created_agent.name);
 
     // Test 6: Clean up - delete the created agent
     println!("Cleaning up - deleting test agent...");
-    client
-        .agents()
-        .delete(&created_agent.id.to_string())
-        .await
-        .unwrap();
+    client.agents().delete(&created_agent.id).await.unwrap();
 
     // Test 7: Test summarize conversation (before deletion)
     // First recreate an agent since we deleted it
@@ -89,7 +78,7 @@ async fn test_local_server_agent_operations() {
     // Test summarize with a reasonable max_message_length
     let summarized_agent = client
         .agents()
-        .summarize_agent_conversation(&summarize_agent.id.to_string(), 10)
+        .summarize_agent_conversation(&summarize_agent.id, 10)
         .await
         .unwrap();
 
@@ -97,11 +86,7 @@ async fn test_local_server_agent_operations() {
     println!("✅ Agent conversation summarized successfully");
 
     // Clean up the summarize test agent
-    client
-        .agents()
-        .delete(&summarize_agent.id.to_string())
-        .await
-        .unwrap();
+    client.agents().delete(&summarize_agent.id).await.unwrap();
 
     // Test 8: Test count and export_file
     println!("Testing agent count...");
@@ -114,11 +99,7 @@ async fn test_local_server_agent_operations() {
     if !current_agents.is_empty() {
         let first_agent = &current_agents[0];
         println!("Testing agent export for ID: {}", first_agent.id);
-        let exported_data = client
-            .agents()
-            .export_file(&first_agent.id.to_string())
-            .await
-            .unwrap();
+        let exported_data = client.agents().export_file(&first_agent.id).await.unwrap();
         println!(
             "✅ Agent exported successfully, data length: {}",
             exported_data.len()
@@ -157,11 +138,7 @@ async fn test_local_server_agent_operations() {
         );
 
         // Clean up the imported agent and temp file
-        client
-            .agents()
-            .delete(&imported_agent.id.to_string())
-            .await
-            .unwrap();
+        client.agents().delete(&imported_agent.id).await.unwrap();
         tokio::fs::remove_file(temp_file_path).await.ok();
         println!("✅ Cleaned up imported agent and temp file");
     }
@@ -190,7 +167,7 @@ async fn test_local_server_agent_operations() {
     }
 
     // Test 9: Verify original deletion
-    let delete_result = client.agents().get(&created_agent.id.to_string()).await;
+    let delete_result = client.agents().get(&created_agent.id).await;
     assert!(
         delete_result.is_err(),
         "Agent should be deleted and not found"
@@ -205,14 +182,15 @@ async fn test_local_server_error_handling() {
     let client = LettaClient::new(config).unwrap();
 
     // Test getting a non-existent agent
-    let result = client.agents().get("agent-nonexistent-id").await;
+    let fake_id = LettaId::from_str("agent-00000000-0000-0000-0000-000000000000").unwrap();
+    let result = client.agents().get(&fake_id).await;
     assert!(
         result.is_err(),
         "Should return error for non-existent agent"
     );
 
     // Test deleting a non-existent agent
-    let result = client.agents().delete("agent-nonexistent-id").await;
+    let result = client.agents().delete(&fake_id).await;
     assert!(
         result.is_err(),
         "Should return error when deleting non-existent agent"

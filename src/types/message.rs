@@ -1,6 +1,6 @@
 //! Message-related types for the Letta API.
 
-use crate::types::common::Timestamp;
+use crate::types::common::{LettaId, Timestamp};
 use serde::{Deserialize, Serialize};
 
 /// Message role.
@@ -29,7 +29,50 @@ pub enum MessageContentVariant {
     Items(Vec<MessageContent>),
 }
 
-/// Message content types.
+/// Message content item types.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum MessageContentItem {
+    /// Text content.
+    Text {
+        /// The text content.
+        text: String,
+    },
+    /// Image content.
+    Image {
+        /// The source of the image.
+        source: ImageContentSource,
+    },
+    /// Tool call content.
+    ToolCall {
+        /// Tool call information.
+        #[serde(flatten)]
+        tool_call: ToolCall,
+    },
+    /// Tool return content.
+    ToolReturn {
+        /// Tool return information.
+        #[serde(flatten)]
+        tool_return: ToolReturn,
+    },
+    /// Reasoning content.
+    Reasoning {
+        /// Reasoning text.
+        reasoning: String,
+    },
+    /// Omitted reasoning content.
+    OmittedReasoning {
+        /// Message indicating reasoning was omitted.
+        message: String,
+    },
+    /// Redacted reasoning content.
+    RedactedReasoning {
+        /// Number of characters redacted.
+        redacted_chars: u32,
+    },
+}
+
+/// Message content types (legacy, keeping for compatibility).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum MessageContent {
@@ -40,8 +83,8 @@ pub enum MessageContent {
     },
     /// Image content.
     Image {
-        /// Image URL or base64 data.
-        image_url: ImageUrl,
+        /// The source of the image.
+        source: ImageContentSource,
     },
     /// Tool call content.
     ToolCall {
@@ -82,17 +125,78 @@ pub struct ImageUrl {
     pub detail: Option<String>,
 }
 
+/// Image content source variants.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum ImageContentSource {
+    /// Base64 encoded image.
+    Base64 {
+        /// The media type for the image.
+        media_type: String,
+        /// The base64 encoded image data.
+        data: String,
+        /// What level of detail to use when processing and understanding the image.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        detail: Option<String>,
+    },
+    /// Letta-hosted image (placeholder for future use).
+    Letta {
+        /// Image ID or reference in Letta's system.
+        id: String,
+    },
+    /// URL-based image.
+    Url {
+        /// The URL of the image.
+        url: String,
+    },
+}
+
 /// Tool call information.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ToolCall {
-    /// Tool call ID.
-    pub id: String,
     /// Tool/function name.
-    #[serde(rename = "function")]
-    pub function: ToolCallFunction,
+    pub name: String,
+    /// Function arguments as JSON string.
+    pub arguments: String,
+    /// Tool call ID.
+    pub tool_call_id: String,
 }
 
-/// Tool call function.
+/// Message tool call (OpenAI format).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MessageToolCall {
+    /// Tool call ID.
+    pub id: String,
+    /// Function details.
+    pub function: MessageToolCallFunction,
+    /// Tool type (always "function").
+    #[serde(rename = "type")]
+    pub tool_type: String,
+}
+
+/// Message tool call function.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MessageToolCallFunction {
+    /// Function name.
+    pub name: String,
+    /// Function arguments as JSON string.
+    pub arguments: String,
+}
+
+/// Message tool return.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MessageToolReturn {
+    /// Return status.
+    pub status: String,
+    /// Stdout output.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stdout: Option<Vec<String>>,
+    /// Stderr output.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stderr: Option<Vec<String>>,
+}
+
+/// Tool call function (for OpenAI-style messages).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ToolCallFunction {
     /// Function name.
@@ -104,12 +208,14 @@ pub struct ToolCallFunction {
 /// Tool return information.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ToolReturn {
-    /// Tool call ID this is responding to.
-    pub tool_call_id: String,
     /// Return status.
     pub status: ToolReturnStatus,
-    /// Tool output.
-    pub content: String,
+    /// Captured stdout from tool invocation.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stdout: Option<Vec<String>>,
+    /// Captured stderr from tool invocation.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stderr: Option<Vec<String>>,
 }
 
 /// Tool return status.
@@ -147,52 +253,54 @@ pub enum HiddenReasoningMessageState {
 pub struct Message {
     /// Message ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<String>,
+    pub id: Option<LettaId>,
+    /// Organization ID.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub organization_id: Option<LettaId>,
     /// Agent ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub agent_id: Option<String>,
-    /// Message role.
+    pub agent_id: Option<LettaId>,
+    /// Model used.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub role: Option<MessageRole>,
-    /// Message content (can be string or multiple items).
+    pub model: Option<String>,
+    /// Message role (required).
+    pub role: MessageRole,
+    /// Message content as array of content items.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub content: Option<MessageContentVariant>,
+    pub content: Option<Vec<MessageContentItem>>,
     /// For user/assistant: participant name. For tool/function: function name.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
     /// Tool calls (for assistant messages).
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub tool_calls: Option<Vec<ToolCall>>,
+    pub tool_calls: Option<Vec<MessageToolCall>>,
     /// Tool call ID (for tool messages).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tool_call_id: Option<String>,
-    /// Model used.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub model: Option<String>,
     /// Step ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub step_id: Option<String>,
+    pub step_id: Option<LettaId>,
     /// Offline threading ID.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub otid: Option<String>,
     /// Tool returns.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub tool_returns: Option<Vec<ToolReturn>>,
+    pub tool_returns: Option<Vec<MessageToolReturn>>,
     /// Group ID for multi-agent.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub group_id: Option<String>,
+    pub group_id: Option<LettaId>,
     /// Sender ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub sender_id: Option<String>,
+    pub sender_id: Option<LettaId>,
     /// Batch item ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub batch_item_id: Option<String>,
+    pub batch_item_id: Option<LettaId>,
     /// Created by user ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub created_by_id: Option<String>,
+    pub created_by_id: Option<LettaId>,
     /// Last updated by user ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub last_updated_by_id: Option<String>,
+    pub last_updated_by_id: Option<LettaId>,
     /// When the message was created.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub created_at: Option<Timestamp>,
@@ -239,16 +347,20 @@ pub struct ListMessagesParams {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::str::FromStr;
 
     #[test]
     fn test_message_serialization() {
         let message = Message {
-            id: Some("msg-123".to_string()),
-            agent_id: Some("agent-456".to_string()),
-            role: Some(MessageRole::User),
-            content: Some(MessageContentVariant::Items(vec![MessageContent::Text {
+            id: Some(LettaId::from_str("message-550e8400-e29b-41d4-a716-446655440000").unwrap()),
+            organization_id: None,
+            agent_id: Some(
+                LettaId::from_str("agent-550e8400-e29b-41d4-a716-446655440001").unwrap(),
+            ),
+            role: MessageRole::User,
+            content: Some(vec![MessageContentItem::Text {
                 text: "Hello, world!".to_string(),
-            }])),
+            }]),
             name: None,
             tool_calls: None,
             tool_call_id: None,
@@ -272,19 +384,17 @@ mod tests {
 
     #[test]
     fn test_message_content_variants() {
-        let text_content = MessageContent::Text {
+        let text_content = MessageContentItem::Text {
             text: "Hello".to_string(),
         };
         let json = serde_json::to_string(&text_content).unwrap();
         assert!(json.contains("\"type\":\"text\""));
 
-        let tool_call = MessageContent::ToolCall {
+        let tool_call = MessageContentItem::ToolCall {
             tool_call: ToolCall {
-                id: "call-123".to_string(),
-                function: ToolCallFunction {
-                    name: "get_weather".to_string(),
-                    arguments: r#"{"location": "Seattle"}"#.to_string(),
-                },
+                name: "get_weather".to_string(),
+                arguments: r#"{"location": "Seattle"}"#.to_string(),
+                tool_call_id: "call-123".to_string(),
             },
         };
         let json = serde_json::to_string(&tool_call).unwrap();
@@ -372,7 +482,7 @@ pub enum LettaMessageUnion {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SystemMessage {
     /// Message ID.
-    pub id: String,
+    pub id: LettaId,
     /// Message timestamp.
     pub date: Timestamp,
     /// Optional participant name.
@@ -383,10 +493,10 @@ pub struct SystemMessage {
     pub otid: Option<String>,
     /// Sender ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub sender_id: Option<String>,
+    pub sender_id: Option<LettaId>,
     /// Step ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub step_id: Option<String>,
+    pub step_id: Option<LettaId>,
     /// System message content.
     pub content: String,
 }
@@ -395,7 +505,7 @@ pub struct SystemMessage {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserMessage {
     /// Message ID.
-    pub id: String,
+    pub id: LettaId,
     /// Message timestamp.
     pub date: Timestamp,
     /// Optional participant name.
@@ -406,10 +516,10 @@ pub struct UserMessage {
     pub otid: Option<String>,
     /// Sender ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub sender_id: Option<String>,
+    pub sender_id: Option<LettaId>,
     /// Step ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub step_id: Option<String>,
+    pub step_id: Option<LettaId>,
     /// User message content.
     pub content: String,
 }
@@ -418,7 +528,7 @@ pub struct UserMessage {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AssistantMessage {
     /// Message ID.
-    pub id: String,
+    pub id: LettaId,
     /// Message timestamp.
     pub date: Timestamp,
     /// Optional participant name.
@@ -429,10 +539,10 @@ pub struct AssistantMessage {
     pub otid: Option<String>,
     /// Sender ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub sender_id: Option<String>,
+    pub sender_id: Option<LettaId>,
     /// Step ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub step_id: Option<String>,
+    pub step_id: Option<LettaId>,
     /// Assistant response content.
     pub content: String,
 }
@@ -441,7 +551,7 @@ pub struct AssistantMessage {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReasoningMessage {
     /// Message ID.
-    pub id: String,
+    pub id: LettaId,
     /// Message timestamp.
     pub date: Timestamp,
     /// Optional participant name.
@@ -452,10 +562,10 @@ pub struct ReasoningMessage {
     pub otid: Option<String>,
     /// Sender ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub sender_id: Option<String>,
+    pub sender_id: Option<LettaId>,
     /// Step ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub step_id: Option<String>,
+    pub step_id: Option<LettaId>,
     /// Source of reasoning.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub source: Option<ReasoningMessageSource>,
@@ -470,7 +580,7 @@ pub struct ReasoningMessage {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HiddenReasoningMessage {
     /// Message ID.
-    pub id: String,
+    pub id: LettaId,
     /// Message timestamp.
     pub date: Timestamp,
     /// Optional participant name.
@@ -481,10 +591,10 @@ pub struct HiddenReasoningMessage {
     pub otid: Option<String>,
     /// Sender ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub sender_id: Option<String>,
+    pub sender_id: Option<LettaId>,
     /// Step ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub step_id: Option<String>,
+    pub step_id: Option<LettaId>,
     /// State of hidden reasoning.
     pub state: HiddenReasoningMessageState,
     /// Hidden reasoning content (redacted).
@@ -496,7 +606,7 @@ pub struct HiddenReasoningMessage {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ToolCallMessage {
     /// Message ID.
-    pub id: String,
+    pub id: LettaId,
     /// Message timestamp.
     pub date: Timestamp,
     /// Optional participant name.
@@ -507,10 +617,10 @@ pub struct ToolCallMessage {
     pub otid: Option<String>,
     /// Sender ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub sender_id: Option<String>,
+    pub sender_id: Option<LettaId>,
     /// Step ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub step_id: Option<String>,
+    pub step_id: Option<LettaId>,
     /// Tool call information.
     pub tool_call: ToolCall,
 }
@@ -519,7 +629,7 @@ pub struct ToolCallMessage {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ToolReturnMessage {
     /// Message ID.
-    pub id: String,
+    pub id: LettaId,
     /// Message timestamp.
     pub date: Timestamp,
     /// Optional participant name.
@@ -530,10 +640,10 @@ pub struct ToolReturnMessage {
     pub otid: Option<String>,
     /// Sender ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub sender_id: Option<String>,
+    pub sender_id: Option<LettaId>,
     /// Step ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub step_id: Option<String>,
+    pub step_id: Option<LettaId>,
     /// Tool return value as string.
     pub tool_return: String,
     /// Status of the tool call.
@@ -563,13 +673,27 @@ pub struct MessageCreate {
     pub otid: Option<String>,
     /// Sender ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub sender_id: Option<String>,
+    pub sender_id: Option<LettaId>,
     /// Batch item ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub batch_item_id: Option<String>,
+    pub batch_item_id: Option<LettaId>,
     /// Group ID for multi-agent conversations.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub group_id: Option<String>,
+    pub group_id: Option<LettaId>,
+}
+
+impl Default for MessageCreate {
+    fn default() -> Self {
+        Self {
+            role: MessageRole::User,
+            content: MessageCreateContent::String(String::new()),
+            name: None,
+            otid: None,
+            sender_id: None,
+            batch_item_id: None,
+            group_id: None,
+        }
+    }
 }
 
 /// Content for message creation (can be simple string or complex types).
@@ -580,6 +704,18 @@ pub enum MessageCreateContent {
     String(String),
     /// Complex content parts for multi-modal messages.
     ContentParts(Vec<ContentPart>),
+}
+
+impl From<String> for MessageCreateContent {
+    fn from(s: String) -> Self {
+        Self::String(s)
+    }
+}
+
+impl From<&str> for MessageCreateContent {
+    fn from(s: &str) -> Self {
+        Self::String(s.to_string())
+    }
 }
 
 /// Individual content part for multi-modal messages.
@@ -662,7 +798,7 @@ pub struct LettaUsageStatistics {
     pub steps_messages: Option<Vec<Vec<Message>>>,
     /// Background task run IDs.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub run_ids: Option<Vec<String>>,
+    pub run_ids: Option<Vec<LettaId>>,
 }
 
 /// Parameters for creating messages.
@@ -701,7 +837,7 @@ pub struct ListMessagesRequest {
     pub limit: Option<i32>,
     /// Filter by group ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub group_id: Option<String>,
+    pub group_id: Option<LettaId>,
     /// Use assistant message format.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub use_assistant_message: Option<bool>,
@@ -711,4 +847,156 @@ pub struct ListMessagesRequest {
     /// Assistant message tool kwargs.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub assistant_message_tool_kwarg: Option<String>,
+}
+
+// =============================================================================
+// Message Update Types
+// =============================================================================
+
+/// Request to modify/update a message.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "message_type", rename_all = "snake_case")]
+pub enum UpdateMessageRequest {
+    /// Update a system message.
+    #[serde(rename = "system_message")]
+    SystemMessage(UpdateSystemMessage),
+    /// Update a user message.
+    #[serde(rename = "user_message")]
+    UserMessage(UpdateUserMessage),
+    /// Update a reasoning message.
+    #[serde(rename = "reasoning_message")]
+    ReasoningMessage(UpdateReasoningMessage),
+    /// Update an assistant message.
+    #[serde(rename = "assistant_message")]
+    AssistantMessage(UpdateAssistantMessage),
+}
+
+/// Update system message request.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateSystemMessage {
+    /// Updated message content.
+    pub content: String,
+}
+
+/// Update user message request.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateUserMessage {
+    /// Updated message content.
+    pub content: UpdateUserMessageContent,
+}
+
+/// Content for updating user messages.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum UpdateUserMessageContent {
+    /// Simple text content.
+    String(String),
+    /// Complex content parts.
+    ContentParts(Vec<ContentPart>),
+}
+
+/// Update reasoning message request.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateReasoningMessage {
+    /// Updated reasoning content.
+    pub reasoning: String,
+}
+
+/// Update assistant message request.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateAssistantMessage {
+    /// Updated message content.
+    pub content: UpdateAssistantMessageContent,
+}
+
+/// Content for updating assistant messages.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum UpdateAssistantMessageContent {
+    /// Simple text content.
+    String(String),
+    /// Complex content parts.
+    ContentParts(Vec<ContentPart>),
+}
+
+// =============================================================================
+// Async Message/Job Types
+// =============================================================================
+
+/// Status of a job/run.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum JobStatus {
+    /// Job was created.
+    Created,
+    /// Job is running.
+    Running,
+    /// Job completed successfully.
+    Completed,
+    /// Job failed.
+    Failed,
+    /// Job is pending.
+    Pending,
+    /// Job was cancelled.
+    Cancelled,
+    /// Job expired.
+    Expired,
+}
+
+/// Type of job.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum JobType {
+    /// Regular job.
+    Job,
+    /// Run (message processing).
+    Run,
+    /// Batch job.
+    Batch,
+}
+
+/// Representation of a run for async message processing.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Run {
+    /// The unique identifier of the run.
+    pub id: LettaId,
+    /// The status of the run.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<JobStatus>,
+    /// The type of job.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub job_type: Option<JobType>,
+    /// When the job was created.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub created_at: Option<Timestamp>,
+    /// When the job was completed.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub completed_at: Option<Timestamp>,
+    /// Created by user ID.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub created_by_id: Option<LettaId>,
+    /// Last updated by user ID.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_updated_by_id: Option<LettaId>,
+    /// When the run was last updated.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub updated_at: Option<Timestamp>,
+    /// Job metadata.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<serde_json::Value>,
+    /// Callback URL for completion notification.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub callback_url: Option<String>,
+    /// When callback was last attempted.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub callback_sent_at: Option<Timestamp>,
+    /// HTTP status code from callback.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub callback_status_code: Option<i32>,
+    /// Error message from callback attempt.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub callback_error: Option<String>,
+    /// Request configuration for the run.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub request_config: Option<serde_json::Value>,
 }

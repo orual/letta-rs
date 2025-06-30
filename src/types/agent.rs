@@ -1,7 +1,7 @@
 //! Agent-related types.
 
-use crate::types::common::{Metadata, ResourceId, Timestamp};
-use crate::types::memory::MemoryBlock;
+use crate::types::common::{LettaId, Metadata, Timestamp};
+use crate::types::memory::Block;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -10,10 +10,10 @@ use std::collections::HashMap;
 pub struct AgentEnvironmentVariable {
     /// The ID of the user that created this object.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub created_by_id: Option<String>,
+    pub created_by_id: Option<LettaId>,
     /// The ID of the user that last updated this object.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub last_updated_by_id: Option<String>,
+    pub last_updated_by_id: Option<LettaId>,
     /// When the object was created.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub created_at: Option<Timestamp>,
@@ -22,7 +22,7 @@ pub struct AgentEnvironmentVariable {
     pub updated_at: Option<Timestamp>,
     /// The human-friendly ID of the agent environment variable.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<String>,
+    pub id: Option<LettaId>,
     /// The name of the environment variable.
     pub key: String,
     /// The value of the environment variable.
@@ -31,7 +31,7 @@ pub struct AgentEnvironmentVariable {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     /// The ID of the agent this environment variable belongs to.
-    pub agent_id: String,
+    pub agent_id: LettaId,
 }
 
 /// Agent type enum.
@@ -240,10 +240,10 @@ pub struct EmbeddingConfig {
 pub struct AgentMemory {
     /// Memory blocks.
     #[serde(default)]
-    pub blocks: Vec<MemoryBlock>,
+    pub blocks: Vec<Block>,
     /// File-based memory blocks.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub file_blocks: Vec<MemoryBlock>,
+    pub file_blocks: Vec<Block>,
     /// Prompt template.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub prompt_template: Option<String>,
@@ -378,7 +378,7 @@ pub struct ResponseFormat {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Agent {
     /// Unique identifier for the agent.
-    pub id: ResourceId,
+    pub id: LettaId,
     /// Agent name.
     pub name: String,
     /// System prompt.
@@ -413,13 +413,13 @@ pub struct Agent {
     pub metadata: Option<Metadata>,
     /// Project ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub project_id: Option<String>,
+    pub project_id: Option<LettaId>,
     /// Created by user ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub created_by_id: Option<String>,
+    pub created_by_id: Option<LettaId>,
     /// Last updated by user ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub last_updated_by_id: Option<String>,
+    pub last_updated_by_id: Option<LettaId>,
     /// When the agent was created.
     pub created_at: Timestamp,
     /// When the agent was last updated.
@@ -429,25 +429,25 @@ pub struct Agent {
     pub tool_rules: Option<Vec<ToolRule>>,
     /// Message IDs.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub message_ids: Vec<String>,
+    pub message_ids: Vec<LettaId>,
     /// Multi-agent group configuration.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub multi_agent_group: Option<serde_json::Value>,
     /// Template ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub template_id: Option<String>,
+    pub template_id: Option<LettaId>,
     /// Base template ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub base_template_id: Option<String>,
+    pub base_template_id: Option<LettaId>,
     /// Identity IDs.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub identity_ids: Option<Vec<String>>,
+    pub identity_ids: Option<Vec<LettaId>>,
     /// Tool execution environment variables.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tool_exec_environment_variables: Option<Vec<AgentEnvironmentVariable>>,
     /// Organization ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub organization_id: Option<String>,
+    pub organization_id: Option<LettaId>,
     /// Timezone.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub timezone: Option<String>,
@@ -488,16 +488,16 @@ pub struct CreateAgentRequest {
     pub embedding_config: Option<EmbeddingConfig>,
     /// Memory blocks.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub memory_blocks: Option<Vec<MemoryBlock>>,
+    pub memory_blocks: Option<Vec<Block>>,
     /// Tools to attach.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tools: Option<Vec<String>>,
     /// Tool IDs to attach (alternative to tools).
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub tool_ids: Option<Vec<String>>,
+    pub tool_ids: Option<Vec<LettaId>>,
     /// Source IDs to attach.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub source_ids: Option<Vec<String>>,
+    pub source_ids: Option<Vec<LettaId>>,
     /// Agent tags.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tags: Option<Vec<String>>,
@@ -542,7 +542,7 @@ pub struct CreateAgentRequest {
     pub message_buffer_autoclear: Option<bool>,
     /// Block IDs to attach.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub block_ids: Option<Vec<String>>,
+    pub block_ids: Option<Vec<LettaId>>,
     /// Model shorthand (alternative to llm_config).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub model: Option<String>,
@@ -572,16 +572,16 @@ pub struct CreateAgentRequest {
     pub memory_variables: Option<HashMap<String, String>>,
     /// Project ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub project_id: Option<String>,
+    pub project_id: Option<LettaId>,
     /// Template ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub template_id: Option<String>,
+    pub template_id: Option<LettaId>,
     /// Base template ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub base_template_id: Option<String>,
+    pub base_template_id: Option<LettaId>,
     /// Identity IDs.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub identity_ids: Option<Vec<String>>,
+    pub identity_ids: Option<Vec<LettaId>>,
     /// Enable sleeptime.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub enable_sleeptime: Option<bool>,
@@ -632,13 +632,13 @@ impl CreateAgentRequestBuilder {
     }
 
     /// Add memory blocks.
-    pub fn memory_blocks(mut self, blocks: Vec<MemoryBlock>) -> Self {
+    pub fn memory_blocks(mut self, blocks: Vec<Block>) -> Self {
         self.request.memory_blocks = Some(blocks);
         self
     }
 
     /// Add a single memory block.
-    pub fn memory_block(mut self, block: MemoryBlock) -> Self {
+    pub fn memory_block(mut self, block: Block) -> Self {
         self.request
             .memory_blocks
             .get_or_insert_with(Vec::new)
@@ -694,6 +694,18 @@ impl CreateAgentRequestBuilder {
         self
     }
 
+    /// Set the model shorthand (alternative to llm_config).
+    pub fn model(mut self, model: impl Into<String>) -> Self {
+        self.request.model = Some(model.into());
+        self
+    }
+
+    /// Set the embedding shorthand (alternative to embedding_config).
+    pub fn embedding(mut self, embedding: impl Into<String>) -> Self {
+        self.request.embedding = Some(embedding.into());
+        self
+    }
+
     /// Build the request.
     pub fn build(self) -> CreateAgentRequest {
         self.request
@@ -737,7 +749,7 @@ pub struct ImportAgentRequest {
     /// Whether to override existing tools with the same name.
     pub override_existing_tools: Option<bool>,
     /// The project ID to associate the uploaded agent with.
-    pub project_id: Option<String>,
+    pub project_id: Option<LettaId>,
     /// If set to True, strips all messages from the agent before importing.
     pub strip_messages: Option<bool>,
 }
@@ -760,7 +772,7 @@ pub struct AgentsSearchRequest {
     pub search: Option<Vec<String>>,
     /// Project ID filter.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub project_id: Option<String>,
+    pub project_id: Option<LettaId>,
     /// Search combinator (only "AND" supported).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub combinator: Option<String>,
@@ -805,16 +817,16 @@ pub struct ListAgentsParams {
     pub query_text: Option<String>,
     /// Filter by project ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub project_id: Option<String>,
+    pub project_id: Option<LettaId>,
     /// Filter by template ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub template_id: Option<String>,
+    pub template_id: Option<LettaId>,
     /// Filter by base template ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub base_template_id: Option<String>,
+    pub base_template_id: Option<LettaId>,
     /// Filter by identity ID.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub identity_id: Option<String>,
+    pub identity_id: Option<LettaId>,
     /// Search by identifier keys.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub identifier_keys: Option<Vec<String>>,
@@ -876,11 +888,12 @@ impl ListAgentsParamsBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::str::FromStr;
 
     #[test]
     fn test_agent_serialization() {
         let agent = Agent {
-            id: "agent-00000000-0000-0000-0000-000000000000".to_string(),
+            id: LettaId::from_str("agent-00000000-0000-0000-0000-000000000000").unwrap(),
             name: "Test Agent".to_string(),
             system: Some("You are a helpful assistant".to_string()),
             agent_type: AgentType::MemGPT,
@@ -940,7 +953,7 @@ mod tests {
             .name("My Agent")
             .system("You are helpful")
             .agent_type(AgentType::MemGPTv2)
-            .memory_block(MemoryBlock {
+            .memory_block(Block {
                 id: None,
                 label: "human".to_string(),
                 value: "The human's name is Bob.".to_string(),
@@ -957,7 +970,7 @@ mod tests {
                 created_at: None,
                 updated_at: None,
             })
-            .memory_block(MemoryBlock {
+            .memory_block(Block {
                 id: None,
                 label: "persona".to_string(),
                 value: "I am Sam, a helpful assistant.".to_string(),
@@ -994,8 +1007,8 @@ mod tests {
 
     #[test]
     fn test_memory_block_serialization() {
-        let block = MemoryBlock {
-            id: Some("block-123".to_string()),
+        let block = Block {
+            id: Some(LettaId::from_str("block-550e8400-e29b-41d4-a716-446655440002").unwrap()),
             label: "human".to_string(),
             value: "The human's name is Alice.".to_string(),
             limit: Some(1000),
@@ -1013,7 +1026,7 @@ mod tests {
         };
 
         let json = serde_json::to_string(&block).unwrap();
-        let deserialized: MemoryBlock = serde_json::from_str(&json).unwrap();
+        let deserialized: Block = serde_json::from_str(&json).unwrap();
         assert_eq!(block.label, deserialized.label);
         assert_eq!(block.value, deserialized.value);
     }

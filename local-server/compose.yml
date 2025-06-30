@@ -5,8 +5,7 @@ services:
     image: letta/letta:latest
     volumes:
       - letta-pgdata:/var/lib/postgresql/data
-    ports:
-      - "8283:8283"
+    network_mode: host
     env_file:
       - path: server.env
         required: true
