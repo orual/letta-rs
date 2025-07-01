@@ -2,7 +2,6 @@
 
 use letta::client::{ClientConfig, LettaClient};
 use letta::types::*;
-use std::str::FromStr;
 
 /// Get a test client for the local server.
 fn get_test_client() -> LettaClient {

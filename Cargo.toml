@@ -4,7 +4,7 @@ edition = "2021"
 # If you change the name here, you must also do it in flake.nix (and run `cargo generate-lockfile` afterwards)
 name = "letta"
 description = "A robust Rust client for the Letta REST API"
-version = "0.1.0"
+version = "0.1.2"
 license = "MIT"
 repository = "https://github.com/srid/letta-rs"
 keywords = ["letta", "ai", "agents", "api", "client"]
@@ -13,6 +13,9 @@ readme = "README.md"
 documentation = "https://docs.rs/letta"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[package.metadata]
+letta-server-version = "0.8.8"
 
 [dependencies]
 # HTTP client

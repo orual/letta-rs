@@ -1,7 +1,6 @@
 //! Integration tests for the Projects API (Cloud only).
 
 use letta::client::LettaClient;
-use letta::types::*;
 use std::env;
 
 /// Get a test client for Letta Cloud.

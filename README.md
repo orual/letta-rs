@@ -22,9 +22,16 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-letta = "0.1.0"
+letta = "0.1.2"
 tokio = { version = "1", features = ["full"] }
 ```
+
+## Compatibility
+
+| letta client | letta server |
+|--------------|--------------|
+| 0.1.2        | 0.8.8        |
+| 0.1.0-0.1.1  | 0.8.x        |
 
 ## Quick Start
 

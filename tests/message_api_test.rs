@@ -1,9 +1,9 @@
 //! Integration tests for the message API.
 
+use letta::types::memory::Block;
 use letta::types::{
-    AgentType, Block, CreateAgentRequest, CreateMessagesRequest, MessageCreate,
-    MessageCreateContent, MessageRole, UpdateMessageRequest, UpdateUserMessage,
-    UpdateUserMessageContent,
+    AgentType, CreateAgentRequest, CreateMessagesRequest, MessageCreate, MessageCreateContent,
+    MessageRole, UpdateMessageRequest, UpdateUserMessage, UpdateUserMessageContent,
 };
 use letta::{ClientConfig, LettaClient};
 use serial_test::serial;
@@ -21,6 +21,8 @@ async fn test_local_server_message_operations() {
         .agent_type(AgentType::MemGPT)
         .model("letta/letta-free")
         .embedding("letta/letta-free")
+        .memory_block(Block::human("The human's name is User"))
+        .memory_block(Block::persona("I am a helpful assistant"))
         .build();
 
     let agent = client.agents().create(create_request).await.unwrap();
@@ -170,6 +172,8 @@ async fn test_update_user_message() {
         .agent_type(AgentType::MemGPT)
         .model("letta/letta-free")
         .embedding("letta/letta-free")
+        .memory_block(Block::human("The human's name is User"))
+        .memory_block(Block::persona("I am a helpful assistant"))
         .build();
 
     let agent = client.agents().create(create_request).await.unwrap();
@@ -252,6 +256,8 @@ async fn test_create_async_message() {
         .agent_type(AgentType::MemGPT)
         .model("letta/letta-free")
         .embedding("letta/letta-free")
+        .memory_block(Block::human("The human's name is User"))
+        .memory_block(Block::persona("I am a helpful assistant"))
         .build();
 
     let agent = client.agents().create(create_request).await.unwrap();
@@ -317,6 +323,8 @@ async fn test_message_pagination() {
         .agent_type(AgentType::MemGPT)
         .model("letta/letta-free")
         .embedding("letta/letta-free")
+        .memory_block(Block::human("The human's name is User"))
+        .memory_block(Block::persona("I am a helpful assistant"))
         .build();
 
     let agent = client.agents().create(create_request).await.unwrap();
