@@ -1166,11 +1166,12 @@ fn validate_tool_schema(schema: &serde_json::Value) -> miette::Result<()> {
     // Required field: name
     if !obj.contains_key("name") {
         return Err(miette!(
-            "Schema missing required field 'name'. Example:\n{{
-  \"name\": \"my_tool\",
-  \"description\": \"Tool description\",
-  \"parameters\": {{ ... }}
-}}"
+            r#"Schema missing required field 'name'. Example:
+{{
+  "name": "my_tool",
+  "description": "Tool description",
+  "parameters": {{ ... }}
+}}"#
         ));
     }
 
@@ -1181,15 +1182,16 @@ fn validate_tool_schema(schema: &serde_json::Value) -> miette::Result<()> {
     // Required field: parameters
     if !obj.contains_key("parameters") {
         return Err(miette!(
-            "Schema missing required field 'parameters'. Example:\n{{
-  \"name\": \"my_tool\",
-  \"description\": \"...\",
-  \"parameters\": {{
-    \"type\": \"object\",
-    \"properties\": {{ ... }},
-    \"required\": [ ... ]
+            r#"Schema missing required field 'parameters'. Example:
+{{
+  "name": "my_tool",
+  "description": "...",
+  "parameters": {{
+    "type": "object",
+    "properties": {{ ... }},
+    "required": [ ... ]
   }}
-}}"
+}}"#
         ));
     }
 
@@ -1204,16 +1206,17 @@ fn validate_tool_schema(schema: &serde_json::Value) -> miette::Result<()> {
     // Check for 'type' field in parameters
     if !params_obj.contains_key("type") {
         return Err(miette!(
-            "Parameters missing 'type' field. Should be:\n\"parameters\": {{
-  \"type\": \"object\",
-  \"properties\": {{ ... }}
-}}"
+            r#"Parameters missing 'type' field. Should be:
+"parameters": {{
+  "type": "object",
+  "properties": {{ ... }}
+}}"#
         ));
     }
 
     if params_obj["type"] != "object" {
         return Err(miette!(
-            "Parameters 'type' should be \"object\", got: {}",
+            r#"Parameters 'type' should be "object", got: {}"#,
             params_obj["type"]
         ));
     }
@@ -1221,13 +1224,14 @@ fn validate_tool_schema(schema: &serde_json::Value) -> miette::Result<()> {
     // Check for 'properties' field
     if !params_obj.contains_key("properties") {
         return Err(miette!(
-            "Parameters missing 'properties' field. Example:\n\"parameters\": {{
-  \"type\": \"object\",
-  \"properties\": {{
-    \"arg1\": {{ \"type\": \"string\", \"description\": \"...\" }},
-    \"arg2\": {{ \"type\": \"integer\", \"description\": \"...\" }}
+            r#"Parameters missing 'properties' field. Example:
+"parameters": {{
+  "type": "object",
+  "properties": {{
+    "arg1": {{ "type": "string", "description": "..." }},
+    "arg2": {{ "type": "integer", "description": "..." }}
   }}
-}}"
+}}"#
         ));
     }
 
@@ -1249,10 +1253,11 @@ fn validate_tool_schema(schema: &serde_json::Value) -> miette::Result<()> {
         let prop_obj = prop_value.as_object().unwrap();
         if !prop_obj.contains_key("type") {
             return Err(miette!(
-                "Property '{}' missing 'type' field. Example:\n\"{}\" : {{
-  \"type\": \"string\",
-  \"description\": \"Description of {}\"
-}}",
+                r#"Property '{}' missing 'type' field. Example:
+"{}" : {{
+  "type": "string",
+  "description": "Description of {}"
+}}"#,
                 prop_name,
                 prop_name,
                 prop_name
@@ -1261,10 +1266,11 @@ fn validate_tool_schema(schema: &serde_json::Value) -> miette::Result<()> {
 
         if !prop_obj.contains_key("description") {
             return Err(miette!(
-                "Property '{}' missing 'description' field. Properties should have:\n{{
-  \"type\": \"...\",
-  \"description\": \"What this parameter does\"
-}}",
+                r#"Property '{}' missing 'description' field. Properties should have:
+{{
+  "type": "...",
+  "description": "What this parameter does"
+}}"#,
                 prop_name
             ));
         }
@@ -1286,8 +1292,22 @@ fn validate_python_docstring(source_code: &str, function_name: &str) -> miette::
     let has_docstring = source_code.contains("\"\"\"") || source_code.contains("'''");
     if !has_docstring {
         return Err(miette!(
-            "Function '{}' missing docstring. Letta requires a docstring with Args and Returns sections:\n\ndef {}(...):\n    \"\"\"\n    Brief description.\n    \n    Args:\n        param1: Description\n        param2: Description\n    \n    Returns:\n        Description of return value\n    \"\"\"\n    ...",
-            function_name, function_name
+            r#"Function '{}' missing docstring. Letta requires a docstring with Args and Returns sections:
+
+def {}(...):
+    """
+    Brief description.
+    
+    Args:
+        param1: Description
+        param2: Description
+    
+    Returns:
+        Description of return value
+    """
+    ..."#,
+            function_name,
+            function_name
         ));
     }
 
@@ -1319,7 +1339,13 @@ fn validate_python_docstring(source_code: &str, function_name: &str) -> miette::
 
     if !has_args_section {
         return Err(miette!(
-            "Docstring missing 'Args:' section. Letta requires parameter documentation:\n\n    Args:\n        param_name: Description of parameter\n        another_param: Description\n\nWithout this, you'll get: \"Parameter 'X' in function '{}' lacks a description in the docstring\"",
+            r#"Docstring missing 'Args:' section. Letta requires parameter documentation:
+
+    Args:
+        param_name: Description of parameter
+        another_param: Description
+
+Without this, you'll get: "Parameter 'X' in function '{}' lacks a description in the docstring""#,
             function_name
         ));
     }
