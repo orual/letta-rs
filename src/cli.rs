@@ -8,6 +8,7 @@ use letta::types::memory::{
 };
 use letta::types::message::{CreateMessagesRequest, MessageCreate, MessageRole};
 use letta::{auth::AuthConfig, ClientConfig, LettaClient};
+use miette::IntoDiagnostic;
 use std::io::Write;
 use std::str::FromStr;
 
@@ -195,7 +196,22 @@ enum MemoryCommand {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> miette::Result<()> {
+    // Install miette's fancy error handler for better diagnostics
+    miette::set_hook(Box::new(|_| {
+        Box::new(
+            miette::MietteHandlerOpts::new()
+                .terminal_links(true)
+                .unicode(true)
+                .context_lines(3)
+                .tab_width(4)
+                .build(),
+        )
+    }))?;
+
+    // Install panic hook to get nice error reports on panics
+    miette::set_panic_hook();
+
     let args = Args::parse();
 
     // Set up logging if verbose
@@ -300,11 +316,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-async fn list_agents(
-    client: &LettaClient,
-    limit: u32,
-    tags: Vec<String>,
-) -> Result<(), Box<dyn std::error::Error>> {
+async fn list_agents(client: &LettaClient, limit: u32, tags: Vec<String>) -> miette::Result<()> {
     println!("Listing agents...");
 
     let mut params = ListAgentsParams::default();
@@ -346,7 +358,7 @@ async fn create_agent(
     embedding: String,
     tags: Vec<String>,
     output: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> miette::Result<()> {
     // Parse agent type
     let agent_type = match agent_type.as_str() {
         "memgpt" => AgentType::MemGPT,
@@ -398,11 +410,11 @@ async fn create_agent(
     match client.agents().create(request).await {
         Ok(agent) => match output {
             "json" => {
-                let json = serde_json::to_string(&agent)?;
+                let json = serde_json::to_string(&agent).into_diagnostic()?;
                 println!("{}", json);
             }
             "pretty" => {
-                let json = serde_json::to_string_pretty(&agent)?;
+                let json = serde_json::to_string_pretty(&agent).into_diagnostic()?;
                 println!("{}", json);
             }
             _ => {
@@ -434,20 +446,16 @@ async fn create_agent(
     Ok(())
 }
 
-async fn get_agent(
-    client: &LettaClient,
-    id: &str,
-    output: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let agent_id = LettaId::from_str(id)?;
+async fn get_agent(client: &LettaClient, id: &str, output: &str) -> miette::Result<()> {
+    let agent_id = LettaId::from_str(id).into_diagnostic()?;
     match client.agents().get(&agent_id).await {
         Ok(agent) => match output {
             "json" => {
-                let json = serde_json::to_string(&agent)?;
+                let json = serde_json::to_string(&agent).into_diagnostic()?;
                 println!("{}", json);
             }
             "pretty" => {
-                let json = serde_json::to_string_pretty(&agent)?;
+                let json = serde_json::to_string_pretty(&agent).into_diagnostic()?;
                 println!("{}", json);
             }
             _ => {
@@ -496,16 +504,12 @@ async fn get_agent(
     Ok(())
 }
 
-async fn delete_agent(
-    client: &LettaClient,
-    id: &str,
-    yes: bool,
-) -> Result<(), Box<dyn std::error::Error>> {
+async fn delete_agent(client: &LettaClient, id: &str, yes: bool) -> miette::Result<()> {
     if !yes {
         print!("Are you sure you want to delete agent {}? (y/N) ", id);
-        std::io::stdout().flush()?;
+        std::io::stdout().flush().into_diagnostic()?;
         let mut input = String::new();
-        std::io::stdin().read_line(&mut input)?;
+        std::io::stdin().read_line(&mut input).into_diagnostic()?;
         if !input.trim().eq_ignore_ascii_case("y") {
             println!("Cancelled.");
             return Ok(());
@@ -513,7 +517,7 @@ async fn delete_agent(
     }
 
     println!("Deleting agent {}...", id);
-    let agent_id = LettaId::from_str(id)?;
+    let agent_id = LettaId::from_str(id).into_diagnostic()?;
     match client.agents().delete(&agent_id).await {
         Ok(_) => {
             println!("Agent deleted successfully.");
@@ -526,20 +530,14 @@ async fn delete_agent(
     Ok(())
 }
 
-async fn check_health(client: &LettaClient) -> Result<(), Box<dyn std::error::Error>> {
-    match client.health().check().await {
-        Ok(health) => {
-            println!("Server is healthy!");
-            println!("\nServer Details:");
-            println!("  Status: {}", health.status);
-            println!("  Version: {}", health.version);
-        }
-        Err(e) => {
-            eprintln!("Error checking health: {}", e);
-            eprintln!("\nThe server may be down or unreachable.");
-            std::process::exit(1);
-        }
-    }
+async fn check_health(client: &LettaClient) -> miette::Result<()> {
+    let health = client.health().check().await?;
+
+    println!("Server is healthy!");
+    println!("\nServer Details:");
+    println!("  Status: {}", health.status);
+    println!("  Version: {}", health.version);
+
     Ok(())
 }
 
@@ -551,7 +549,7 @@ async fn send_message(
     max_steps: Option<i32>,
     stream: bool,
     output: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> miette::Result<()> {
     // Parse message role
     let role = match role.to_lowercase().as_str() {
         "user" => MessageRole::User,
@@ -580,7 +578,7 @@ async fn send_message(
         request.max_steps = Some(steps);
     }
 
-    let agent_id = LettaId::from_str(agent_id)?;
+    let agent_id = LettaId::from_str(agent_id).into_diagnostic()?;
 
     if stream {
         // Handle streaming response
@@ -602,7 +600,7 @@ async fn send_message(
                 Ok(letta::StreamingEvent::Message(msg)) => {
                     match output {
                         "json" => {
-                            println!("{}", serde_json::to_string(&msg)?);
+                            println!("{}", serde_json::to_string(&msg).into_diagnostic()?);
                         }
                         _ => {
                             // Pretty print the message based on type
@@ -628,7 +626,10 @@ async fn send_message(
                                 }
                                 _ => {
                                     // For other message types, show the JSON
-                                    println!("{}", serde_json::to_string_pretty(&msg)?);
+                                    println!(
+                                        "{}",
+                                        serde_json::to_string_pretty(&msg).into_diagnostic()?
+                                    );
                                 }
                             }
                         }
@@ -636,12 +637,12 @@ async fn send_message(
                 }
                 Ok(letta::StreamingEvent::StopReason(reason)) => {
                     if output == "json" {
-                        println!("{}", serde_json::to_string(&reason)?);
+                        println!("{}", serde_json::to_string(&reason).into_diagnostic()?);
                     }
                 }
                 Ok(letta::StreamingEvent::Usage(usage)) => {
                     if output == "json" {
-                        println!("{}", serde_json::to_string(&usage)?);
+                        println!("{}", serde_json::to_string(&usage).into_diagnostic()?);
                     } else if output != "summary" {
                         println!("\nUsage Statistics:");
                         if let Some(steps) = usage.step_count {
@@ -667,10 +668,13 @@ async fn send_message(
         match client.messages().create(&agent_id, request).await {
             Ok(response) => match output {
                 "json" => {
-                    println!("{}", serde_json::to_string(&response)?);
+                    println!("{}", serde_json::to_string(&response).into_diagnostic()?);
                 }
                 "pretty" => {
-                    println!("{}", serde_json::to_string_pretty(&response)?);
+                    println!(
+                        "{}",
+                        serde_json::to_string_pretty(&response).into_diagnostic()?
+                    );
                 }
                 _ => {
                     println!("Message sent successfully!\n");
@@ -729,8 +733,8 @@ async fn list_messages(
     agent_id: &str,
     limit: i32,
     output: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let agent_id = LettaId::from_str(agent_id)?;
+) -> miette::Result<()> {
+    let agent_id = LettaId::from_str(agent_id).into_diagnostic()?;
 
     let params = letta::types::message::ListMessagesRequest {
         limit: Some(limit),
@@ -740,10 +744,13 @@ async fn list_messages(
     match client.messages().list(&agent_id, Some(params)).await {
         Ok(messages) => match output {
             "json" => {
-                println!("{}", serde_json::to_string(&messages)?);
+                println!("{}", serde_json::to_string(&messages).into_diagnostic()?);
             }
             "pretty" => {
-                println!("{}", serde_json::to_string_pretty(&messages)?);
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&messages).into_diagnostic()?
+                );
             }
             _ => {
                 if messages.is_empty() {
@@ -797,20 +804,19 @@ async fn list_messages(
     Ok(())
 }
 
-async fn view_memory(
-    client: &LettaClient,
-    agent_id: &str,
-    output: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let agent_id = LettaId::from_str(agent_id)?;
+async fn view_memory(client: &LettaClient, agent_id: &str, output: &str) -> miette::Result<()> {
+    let agent_id = LettaId::from_str(agent_id).into_diagnostic()?;
 
     match client.memory().get_core_memory(&agent_id).await {
         Ok(memory) => match output {
             "json" => {
-                println!("{}", serde_json::to_string(&memory)?);
+                println!("{}", serde_json::to_string(&memory).into_diagnostic()?);
             }
             "pretty" => {
-                println!("{}", serde_json::to_string_pretty(&memory)?);
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&memory).into_diagnostic()?
+                );
             }
             _ => {
                 println!("Core Memory for Agent:\n");
@@ -836,8 +842,8 @@ async fn edit_memory_block(
     block_label: &str,
     new_value: &str,
     output: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let agent_id = LettaId::from_str(agent_id)?;
+) -> miette::Result<()> {
+    let agent_id = LettaId::from_str(agent_id).into_diagnostic()?;
 
     let request = UpdateMemoryBlockRequest {
         value: Some(new_value.to_string()),
@@ -851,10 +857,13 @@ async fn edit_memory_block(
     {
         Ok(block) => match output {
             "json" => {
-                println!("{}", serde_json::to_string(&block)?);
+                println!("{}", serde_json::to_string(&block).into_diagnostic()?);
             }
             "pretty" => {
-                println!("{}", serde_json::to_string_pretty(&block)?);
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&block).into_diagnostic()?
+                );
             }
             _ => {
                 println!("Memory block updated successfully!");
@@ -881,8 +890,8 @@ async fn list_archival_memory(
     query: Option<String>,
     limit: u32,
     output: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let agent_id = LettaId::from_str(agent_id)?;
+) -> miette::Result<()> {
+    let agent_id = LettaId::from_str(agent_id).into_diagnostic()?;
 
     let params = ArchivalMemoryQueryParams {
         search: query,
@@ -897,10 +906,13 @@ async fn list_archival_memory(
     {
         Ok(passages) => match output {
             "json" => {
-                println!("{}", serde_json::to_string(&passages)?);
+                println!("{}", serde_json::to_string(&passages).into_diagnostic()?);
             }
             "pretty" => {
-                println!("{}", serde_json::to_string_pretty(&passages)?);
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&passages).into_diagnostic()?
+                );
             }
             _ => {
                 if passages.is_empty() {
@@ -940,8 +952,8 @@ async fn add_archival_memory(
     agent_id: &str,
     text: &str,
     output: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let agent_id = LettaId::from_str(agent_id)?;
+) -> miette::Result<()> {
+    let agent_id = LettaId::from_str(agent_id).into_diagnostic()?;
 
     let request = CreateArchivalMemoryRequest {
         text: text.to_string(),
@@ -954,10 +966,13 @@ async fn add_archival_memory(
     {
         Ok(passages) => match output {
             "json" => {
-                println!("{}", serde_json::to_string(&passages)?);
+                println!("{}", serde_json::to_string(&passages).into_diagnostic()?);
             }
             "pretty" => {
-                println!("{}", serde_json::to_string_pretty(&passages)?);
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&passages).into_diagnostic()?
+                );
             }
             _ => {
                 println!("Archival memory added successfully!");
