@@ -21,103 +21,33 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This project is a Rust client library for the Letta REST API. Letta is a stateful AI agent platform that enables building agents with persistent memory and context across conversations. The library provides idiomatic Rust bindings for all Letta API endpoints, with a CLI tool included for testing and development purposes.
+This is the development guide for contributing to letta-rs, a Rust client library for the Letta REST API. This document contains internal implementation details, coding standards, and development workflows. For user documentation, see README.md.
 
-### Letta API Scope
-The implementation includes all major API categories from the official specification:
+### Implementation Status
 
-**Completed APIs:**
-- ✅ **Agents**: CRUD operations for AI agents with persistent state and messaging
-- ✅ **Messages**: Real-time messaging with streaming support (SSE)
-- ✅ **Memory**: Core and archival memory operations with pagination
-- ✅ **Blocks**: Memory block operations for persistent storage
-- ✅ **Sources**: Document upload and processing for agent knowledge
-- ✅ **Tools**: Tool management and execution framework (including MCP and Composio)
-- ✅ **Groups**: Multi-agent group conversations
-- ✅ **Jobs**: Asynchronous job management with source_id filtering
-- ✅ **Projects**: Project management
-- ✅ **Templates**: Agent templates
-- ✅ **Runs**: Execution runs and steps
-- ✅ **Health**: Health checks
-- ✅ **Models**: Model configuration and management (LLM and embedding models)
-- ✅ **Tags**: Tag management system with pagination support
-- ✅ **Providers**: LLM provider management with full CRUD operations
-- ✅ **Identities**: Identity management with CRUD operations and pagination
-- ✅ **Authentication**: Bearer token-based API authentication
-- ✅ **Misc**: Provider listing endpoint
+**All 20 planned APIs are implemented.** Voice API is in beta with generic JSON support due to undocumented structure.
 
-**Remaining APIs to Implement:**
-- ❌ **Telemetry**: Usage tracking and analytics
-- ❌ **Batches**: Batch processing operations
-- ❌ **Voice**: Voice conversation support
+#### Pagination Implementation Matrix
+- **Full pagination**: agents, messages, memory.archival, tags, providers, tools, sources.files, sources.passages, identities
+- **No pagination**: blocks, groups, jobs, runs, batch (API limitations)
+- **Generic types used**: Voice (serde_json::Value), Identities properties (serde_json::Value)
 
 ## Development Commands
 
-### Building and Running
 ```bash
-# Build the library
-cargo build
-nix build
+# Quick start
+nix develop           # Enter dev shell with all tools
+just watch           # Auto-recompile on changes
+just test           # Run all tests
+just pre-commit-all # Format and lint
 
-# Run tests
-cargo test
+# Local Letta server for testing
+cd local-server && docker compose up -d
 
-# Build and install the CLI testing tool
-cargo install --path . --features cli
-
-# Development with auto-recompilation
-just watch
-bacon --job run
+# CLI tool (generates JSON, doesn't make API calls)
+cargo run --features cli -- agent create -n "Test" -o json | \
+  curl -X POST http://localhost:8283/v1/agents -H "Content-Type: application/json" -d @-
 ```
-
-### CLI Testing Tool
-The project includes a CLI tool for testing the library functionality:
-```bash
-# Run the CLI directly
-cargo run --features cli -- <command>
-
-# Create an agent (generates JSON, actual API calls not yet implemented)
-cargo run --features cli -- agent create -n "Test Agent" -m "letta/letta-free" -e "letta/letta-free" -o json
-
-# Use with curl for actual API testing
-cargo run --features cli -- agent create -n "Test" -m "letta/letta-free" -o json | curl -X POST http://localhost:8283/v1/agents -H "Content-Type: application/json" -d @-
-```
-
-### Development Environment
-```bash
-# Enter Nix development shell
-nix develop
-
-# Run all pre-commit hooks (formatting, linting)
-just pre-commit-all
-pre-commit run --all-files
-
-# Update Nix flake inputs
-nix flake update
-```
-
-
-### Testing
-```bash
-cargo test
-cargo test --doc
-```
-
-### Local Development Server
-A local Letta server is provided for development and testing:
-```bash
-# Start the local server (from local-server/ directory)
-cd local-server
-docker compose up -d
-
-# Stop the server
-docker compose down
-
-# View server logs
-docker logs letta-letta-server-1
-```
-
-The local server runs on `http://localhost:8283` and requires no authentication.
 
 ## Architecture
 
@@ -138,6 +68,9 @@ The local server runs on `http://localhost:8283` and requires no authentication.
   - `models.rs` - Model configuration types
   - `tags.rs` - Tag-related types
   - `provider.rs` - Provider configuration types
+  - `identities.rs` - Identity types (User, Org, Other)
+  - `batch.rs` - Batch processing types
+  - `telemetry.rs` - Telemetry trace types
   - `common.rs` - Shared types and utilities
 - `src/api/` - API endpoint implementations
   - `agents.rs` - Agent CRUD operations
@@ -156,6 +89,9 @@ The local server runs on `http://localhost:8283` and requires no authentication.
   - `tags.rs` - Tag management
   - `providers.rs` - Provider management
   - `misc.rs` - Miscellaneous endpoints
+  - `batch.rs` - Batch processing operations
+  - `telemetry.rs` - Telemetry trace retrieval
+  - `voice.rs` - Voice conversation support (beta)
 - `src/cli.rs` - CLI testing tool (binary: `letta`, requires `cli` feature)
 - `tests/` - Integration tests
 - `nix/modules/` - Modular Nix configuration
@@ -163,11 +99,8 @@ The local server runs on `http://localhost:8283` and requires no authentication.
   - `rust.nix` - Rust build configuration via rust-flake/crane
   - `pre-commit.nix` - Code formatting and linting hooks
 - `justfile` - Command shortcuts for common development tasks
-- `local-server/` - Local Letta server for development testing
-  - `compose.yml` - Docker Compose configuration
-  - `server.env` - Server environment variables
-- `letta-node/` - Node.js/TypeScript SDK reference (git submodule)
-- `letta-python/` - Python SDK reference (git submodule)
+- `compose.yml` - Docker Compose configuration for local test server
+- `server.env` - Server environment variables (need to provide an example, since this is not committed)
 
 ### Build System
 This project uses a dual build approach:
@@ -180,89 +113,62 @@ The Nix configuration uses flake-parts for modularity and imports rust-flake for
 - `clap` (4.5+) with derive and env features for CLI argument parsing
 - Development tools: just, bacon, nixd, cargo-doc-live, docker compose
 
-### Agent Type System
+### Critical Implementation Details
 
-The crate provides comprehensive agent data models with full enum support:
+#### Error Response Parsing
+The API returns errors in various formats. Our error handler checks these fields in order:
+1. `detail` (string or array)
+2. `error.message`
+3. `error`
+4. `message`
+5. `msg`
 
-- **AgentType**: MemGPT, MemGPTv2, React, Workflow, SplitThread, Sleeptime, VoiceConvo, VoiceSleeptime
-- **ModelEndpointType**: Openai, Anthropic, Cohere, GoogleAi, Azure, Groq, Ollama, vLLM, Mistral, Together, etc.
-- **EmbeddingEndpointType**: Openai, Azure, Cohere, HuggingFace, Ollama
-- **CreateAgentRequest**: Includes all fields from API spec including tool_rules, initial_message_sequence, tool_exec_environment_variables, response_format, enable_reasoner, message_buffer_autoclear
+#### Headers and Authentication
+- Bearer token in Authorization header
+- Optional headers: `X-Project`, `user-id`
+- All headers handled via ClientConfig
 
-### Error Handling Strategy
+#### Streaming (SSE) Implementation
+- Uses `eventsource-stream` crate
+- Handles reconnection and error recovery
+- Parses JSON chunks from `data:` lines
+- Supports assistant messages, function calls, and usage events
 
-The crate uses a sophisticated error handling system matching the TypeScript/Python SDK patterns:
+## Testing Strategy
 
-- **LettaError::Api**: Handles HTTP API errors with full response context
-  - `status`: HTTP status code
-  - `message`: Extracted or default error message
-  - `code`: Optional error code from API
-  - `body`: Raw response body (text/HTML/JSON)
-  - `json_body`: Parsed JSON if response was valid JSON
-- **Smart parsing**: Automatically extracts messages/codes from common JSON error fields
-- **Fallback handling**: Graceful handling of non-JSON error responses
-- **Rich diagnostics**: miette integration for excellent error reporting
-- **Retry detection**: Built-in classification of retryable vs non-retryable errors
+### Unit Tests
+- Test type serialization/deserialization
+- Test error parsing logic
+- Test pagination cursor handling
 
-## Letta API Implementation Details
+### Integration Tests
+- Require local Letta server (docker compose)
+- Test full API workflows
+- Currently manual - need automation for CI
 
-### Core API Endpoints Structure
-- `/v1/agents` - Agent lifecycle management and configuration
-- `/v1/agents/{agent_id}/messages` - Message exchange with streaming support
-- `/v1/agents/{agent_id}/core-memory` - In-context memory management
-- `/v1/agents/{agent_id}/archival-memory` - Vector-based long-term memory
-- `/v1/tools` - Tool management and execution
-- `/v1/sources` - Document and data source management
-- `/v1/blocks` - Memory block operations
-- `/v1/groups` - Multi-agent group conversations
+### Known Test Issues
+- Cloud API tests require real API keys
+- No mock server implementation yet
+- CLI doesn't make actual API calls (TODO)
+- Archival memory test has server bug noted
 
-### Key Technical Requirements
-- **Authentication**: Bearer token validation
-- **Streaming**: Server-sent events (SSE) for real-time responses
-- **Memory Management**: Core, archival, and recall memory systems
-- **Vector Storage**: Semantic search capabilities for archival memory
-- **Tool Execution**: Dynamic tool loading and execution framework
-- **File Handling**: Document upload and processing pipeline
-- **Header Parameters**: Support for custom headers like `X-Project` and `user-id` (see HEADER_PARAMETERS.md)
+## Adding New APIs Checklist
 
-### Pagination Pattern
-All list endpoints use cursor-based pagination with `before`, `after`, `limit` parameters.
+1. Create types in `src/types/{api_name}.rs`
+2. Add API module in `src/api/{api_name}.rs`
+3. Export from `src/types/mod.rs` and `src/api/mod.rs`
+4. Add convenience method to `LettaClient`
+5. Write integration tests
+6. Update README.md API coverage section
+7. Check if pagination is supported (look for cursor params)
+8. Handle any special cases (generic JSON, file uploads, streaming)
 
-### Pagination Implementation Status
+## Development Resources
 
-The library provides a generic `PaginatedStream` that supports automatic cursor-based pagination, filtering, mapping, and collection of results. It supports both ID-based cursors (`LettaId`) and string-based cursors.
-
-**Implemented with Pagination Support:**
-- ✅ `agents.paginated()` - Full pagination support with ID-based cursors
-- ✅ `messages.paginated()` - Pagination for message lists with ID-based cursors
-- ✅ `memory.archival_paginated()` - Pagination for archival memory with ID-based cursors
-- ✅ `tags.paginated()` - Pagination with string-based cursors
-- ✅ `providers.paginated()` - Pagination with ID-based cursors
-- ✅ `tools.paginated()` - Pagination with string-based cursors
-- ✅ `sources.paginated_files()` - Pagination for file lists with string-based cursors
-- ✅ `sources.paginated_passages()` - Pagination for passage lists with string-based cursors
-- ✅ `identities.paginated()` - Pagination with string-based cursors
-
-**APIs that could support pagination (have cursor params):**
-- ⬜ Groups API - Group messages may support pagination
-
-**APIs without cursor-based pagination support:**
-- Blocks API - Only has `limit` parameter, no cursor support
-- Memory: `list_core_memory_blocks()`, `list_agent_tools()` - No pagination params
-- Sources: main `list()` method - No pagination params
-- Various tool/MCP/Composio list methods - No pagination params
-- Runs API: Uses array-based filtering, not cursor pagination
-- Jobs API: Has limit but no cursor pagination
-
-## API Reference
-
-- **Official Documentation**: https://docs.letta.com/api-reference/
-- **Base URLs**:
-  - Local: `http://localhost:8283`
-  - Cloud: `https://api.letta.com` (with API key)
-- **Reference Implementations**:
-  - TypeScript SDK: `letta-node/` submodule
-  - Python SDK: `letta-python/` submodule
+- **API Spec**: https://docs.letta.com/api-reference/
+- **Reference SDKs**: Check letta-node/ and letta-python/ submodules for patterns
+- **Local Testing**: Use local-server/ for development
+- **Type Discovery**: Use `curl -v` against local server to inspect responses
 
 ## Recent Implementation Notes
 
@@ -299,17 +205,58 @@ The library provides a generic `PaginatedStream` that supports automatic cursor-
 - Added pagination for files (`paginated_files()`) and passages (`paginated_passages()`)
 - Both use string-based cursor pagination
 
-## Implementation Priorities
+### Batch API
+- Full batch message processing implementation
+- List batch messages with optional filtering by run/step IDs
+- Uses `ListBatchMessagesParams` with limit parameter (no cursor pagination)
 
-1. **High Priority**:
-   - ~~Identities API (for agent identity management)~~ ✅ Completed
-   - ~~Pagination for Tools API~~ ✅ Completed
-   - ~~Pagination for Sources files/passages~~ ✅ Completed
+### Telemetry API
+- Provider trace retrieval by step ID
+- Returns `ProviderTrace` objects with telemetry data
+- Currently supports trace retrieval only (not full usage tracking)
 
-2. **Medium Priority**:
-   - Telemetry API (usage tracking)
-   - Batches API (batch operations)
+### Voice API (Beta)
+- Basic voice chat completions endpoint at `/v1/voice-beta/{agent_id}/chat/completions`
+- Uses generic JSON values (`serde_json::Value`) due to undocumented API structure
+- Expects OpenAI-compatible chat completion requests based on docs
+- `create_voice_chat_completions` endpoint with optional `user-id` header support
+- Designed for streaming voice agent interactions with `voice_convo_agent` type
+- API structure is undocumented and subject to change
 
-3. **Low Priority**:
-   - Voice API (voice conversation support)
-   - Examples directory with common use cases
+## Implementation Gotchas
+
+### API-Specific Quirks
+
+1. **Providers API**: Updates only accept `api_key`, `access_key`, `region` (not all fields)
+2. **Identities API**: Upsert only updates existing (404 for new), use create instead
+3. **Delete endpoints**: Return 204 No Content (handled as Option<T>)
+4. **Voice API**: Completely undocumented, uses OpenAI-like format
+5. **Batch API**: Has limit but no cursor pagination
+6. **File uploads**: Use multipart form with proper content-type detection
+
+### Serialization Edge Cases
+
+1. **Enum lowercase**: Many enums serialize as lowercase (e.g., identity_type)
+2. **Skip None fields**: Use `#[serde(skip_serializing_if = "Option::is_none")]`
+3. **Flatten for generic**: Use `#[serde(flatten)]` for pass-through JSON
+4. **Array query params**: Repeated params for Vec<T> (e.g., ?category=Base&category=Byok)
+
+## Contribution Guidelines
+
+### Code Style
+- Use `cargo fmt` and `cargo clippy` (enforced by pre-commit)
+- Follow existing patterns for consistency
+- Add doc comments for all public APIs
+- Include usage examples in doc comments
+
+### Testing Requirements
+- Add unit tests for new types
+- Add integration tests for new APIs
+- Test error cases and edge conditions
+- Verify against local server before PR
+
+### Documentation
+- Update README.md for user-facing changes
+- Keep CLAUDE.md updated for implementation details
+- Add inline documentation for complex logic
+- Include examples in rustdoc comments

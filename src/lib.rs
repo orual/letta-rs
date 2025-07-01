@@ -34,11 +34,151 @@
 //! }
 //! ```
 //!
+//! ## Creating and Interacting with Agents
+//!
+//! ```rust,no_run
+//! use letta_rs::{LettaClient, types::*};
+//! use serde_json::json;
+//!
+//! #[tokio::main]
+//! async fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     let client = LettaClient::local()?;
+//!
+//!     // Create a new agent with custom memory
+//!     let agent_request = CreateAgentRequest {
+//!         name: "Assistant".to_string(),
+//!         agent_type: Some(AgentType::MemGPT),
+//!         llm_config: Some(json!({
+//!             "model_endpoint_type": "openai",
+//!             "model": "gpt-4",
+//!         })),
+//!         memory_blocks: Some(vec![
+//!             CreateBlock {
+//!                 block_type: BlockType::Human,
+//!                 value: "Name: Alice\nRole: Developer".to_string(),
+//!                 label: Some("human".to_string()),
+//!                 ..Default::default()
+//!             },
+//!             CreateBlock {
+//!                 block_type: BlockType::Persona,
+//!                 value: "You are a helpful coding assistant.".to_string(),
+//!                 label: Some("persona".to_string()),
+//!                 ..Default::default()
+//!             }
+//!         ]),
+//!         ..Default::default()
+//!     };
+//!
+//!     let agent = client.agents().create(agent_request).await?;
+//!     println!("Created agent: {}", agent.id);
+//!
+//!     // Send a message and stream the response
+//!     let stream = client
+//!         .messages()
+//!         .send_streamed(&agent.id, "Hello! Can you help me with Rust?", None)
+//!         .await?;
+//!
+//!     // Handle streaming responses
+//!     tokio::pin!(stream);
+//!     while let Some(event) = stream.next().await {
+//!         match event? {
+//!             StreamingEvent::AssistantMessage(msg) => {
+//!                 print!("{}", msg.message);
+//!             }
+//!             StreamingEvent::FunctionCall(call) => {
+//!                 println!("\nCalling function: {}", call.name);
+//!             }
+//!             _ => {}
+//!         }
+//!     }
+//!
+//!     Ok(())
+//! }
+//! ```
+//!
+//! ## Memory Management
+//!
+//! ```rust,no_run
+//! use letta_rs::{LettaClient, types::*};
+//!
+//! #[tokio::main]
+//! async fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     let client = LettaClient::local()?;
+//!     let agent_id = LettaId::new("agent-123");
+//!
+//!     // Update core memory
+//!     client
+//!         .memory()
+//!         .update_core_memory(&agent_id, "human", "Name: Bob\nRole: Manager")
+//!         .await?;
+//!
+//!     // Add to archival memory
+//!     let memory = client
+//!         .memory()
+//!         .insert_archival_memory(&agent_id, "Important: Project deadline is next Friday")
+//!         .await?;
+//!
+//!     // Search archival memory with semantic search
+//!     let results = client
+//!         .memory()
+//!         .search_archival_memory(&agent_id, "project deadline", Some(5))
+//!         .await?;
+//!
+//!     for result in results {
+//!         println!("Found: {} (relevance: {})", result.text, result.score.unwrap_or(0.0));
+//!     }
+//!
+//!     Ok(())
+//! }
+//! ```
+//!
+//! ## Pagination Support
+//!
+//! ```rust,no_run
+//! use letta_rs::LettaClient;
+//! use futures::StreamExt;
+//!
+//! #[tokio::main]
+//! async fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     let client = LettaClient::local()?;
+//!
+//!     // Use pagination to handle large result sets
+//!     let mut agent_stream = client
+//!         .agents()
+//!         .paginated()
+//!         .limit(10)
+//!         .build();
+//!
+//!     // Automatically fetches next pages as needed
+//!     while let Some(agent) = agent_stream.next().await {
+//!         let agent = agent?;
+//!         println!("Agent: {} ({})", agent.name, agent.id);
+//!     }
+//!
+//!     // Also works with archival memory
+//!     let agent_id = letta_rs::LettaId::new("agent-123");
+//!     let mut memory_stream = client
+//!         .memory()
+//!         .archival_paginated(&agent_id)
+//!         .text("important")
+//!         .limit(20)
+//!         .build();
+//!
+//!     while let Some(memory) = memory_stream.next().await {
+//!         let memory = memory?;
+//!         println!("Memory: {}", memory.text);
+//!     }
+//!
+//!     Ok(())
+//! }
+//! ```
+//!
 //! ## Features
 //!
-//! - **Complete API Coverage**: All Letta REST API endpoints
+//! - **Complete API Coverage**: All 20+ Letta REST API endpoints
 //! - **Async/Await**: Full async support with tokio
 //! - **Streaming**: Server-sent events for real-time messaging
+//! - **Pagination**: Automatic cursor-based pagination with `PaginatedStream`
 //! - **Type Safety**: Comprehensive type definitions with serde
 //! - **Error Handling**: Rich error types with miette diagnostics
 //! - **Authentication**: Bearer token and API key support
@@ -51,6 +191,19 @@
 //! - [`memory`](crate::api::memory) - Memory management (core, archival, blocks)
 //! - [`tools`](crate::api::tools) - Tool management and execution
 //! - [`sources`](crate::api::sources) - Document and data source management
+//! - [`blocks`](crate::api::blocks) - Memory block operations
+//! - [`groups`](crate::api::groups) - Multi-agent conversations
+//! - [`jobs`](crate::api::jobs) - Asynchronous job management
+//! - [`projects`](crate::api::projects) - Project organization
+//! - [`templates`](crate::api::templates) - Agent templates
+//! - [`runs`](crate::api::runs) - Execution tracking
+//! - [`models`](crate::api::models) - Model configuration
+//! - [`providers`](crate::api::providers) - LLM provider management
+//! - [`identities`](crate::api::identities) - Identity management
+//! - [`tags`](crate::api::tags) - Tag-based organization
+//! - [`batch`](crate::api::batch) - Batch processing
+//! - [`telemetry`](crate::api::telemetry) - Usage tracking
+//! - [`voice`](crate::api::voice) - Voice conversations (beta)
 //!
 //! ## Error Handling
 //!
