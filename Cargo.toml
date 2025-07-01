@@ -11,6 +11,9 @@ keywords = ["letta", "ai", "agents", "api", "client"]
 categories = ["api-bindings", "web-programming::http-client"]
 readme = "README.md"
 documentation = "https://docs.rs/letta"
+# ...
+exclude = [".claude", "CLAUDE*", "*.md"]
+include = ["README.md"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
