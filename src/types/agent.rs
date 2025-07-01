@@ -470,6 +470,111 @@ pub enum ToolRule {
     },
 }
 
+impl ToolRule {
+    /// Create a continue loop rule.
+    pub fn continue_loop(tool_name: impl Into<String>) -> Self {
+        Self::ContinueLoop {
+            tool_name: tool_name.into(),
+            prompt_template: None,
+        }
+    }
+
+    /// Create an exit loop rule.
+    pub fn exit_loop(tool_name: impl Into<String>) -> Self {
+        Self::ExitLoop {
+            tool_name: tool_name.into(),
+            prompt_template: None,
+        }
+    }
+
+    /// Create a terminal rule (deprecated, prefer exit_loop).
+    pub fn terminal(tool_name: impl Into<String>) -> Self {
+        Self::Terminal {
+            tool_name: tool_name.into(),
+            prompt_template: None,
+        }
+    }
+
+    /// Create a max count per step rule.
+    pub fn max_count_per_step(tool_name: impl Into<String>, max_count_limit: u32) -> Self {
+        Self::MaxCountPerStep {
+            tool_name: tool_name.into(),
+            prompt_template: None,
+            max_count_limit,
+        }
+    }
+
+    /// Create a child tool rule.
+    pub fn child(tool_name: impl Into<String>, child_tool_name: impl Into<String>) -> Self {
+        Self::Child {
+            tool_name: tool_name.into(),
+            prompt_template: None,
+            child_tool_name: child_tool_name.into(),
+        }
+    }
+
+    /// Create a parent tool rule.
+    pub fn parent(tool_name: impl Into<String>, parent_tool_name: impl Into<String>) -> Self {
+        Self::Parent {
+            tool_name: tool_name.into(),
+            prompt_template: None,
+            parent_tool_name: parent_tool_name.into(),
+        }
+    }
+
+    /// Create a required before exit rule.
+    pub fn required_before_exit(tool_name: impl Into<String>) -> Self {
+        Self::RequiredBeforeExit {
+            tool_name: tool_name.into(),
+            prompt_template: None,
+        }
+    }
+
+    /// Create an init rule.
+    pub fn init(tool_name: impl Into<String>) -> Self {
+        Self::Init {
+            tool_name: tool_name.into(),
+            prompt_template: None,
+        }
+    }
+
+    /// Add a prompt template to this rule.
+    pub fn with_prompt_template(mut self, template: impl Into<String>) -> Self {
+        match &mut self {
+            Self::ContinueLoop {
+                prompt_template, ..
+            }
+            | Self::ExitLoop {
+                prompt_template, ..
+            }
+            | Self::Terminal {
+                prompt_template, ..
+            }
+            | Self::MaxCountPerStep {
+                prompt_template, ..
+            }
+            | Self::Conditional {
+                prompt_template, ..
+            }
+            | Self::Child {
+                prompt_template, ..
+            }
+            | Self::Parent {
+                prompt_template, ..
+            }
+            | Self::RequiredBeforeExit {
+                prompt_template, ..
+            }
+            | Self::Init {
+                prompt_template, ..
+            } => {
+                *prompt_template = Some(template.into());
+            }
+        }
+        self
+    }
+}
+
 /// Response format type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, SmartDefault)]
 #[serde(rename_all = "snake_case")]
@@ -490,6 +595,33 @@ pub struct ResponseFormat {
     /// JSON schema for validation (when type is json_object).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub json_schema: Option<serde_json::Value>,
+}
+
+impl ResponseFormat {
+    /// Create a text response format.
+    pub fn text() -> Self {
+        Self {
+            format_type: ResponseFormatType::Text,
+            json_schema: None,
+        }
+    }
+
+    /// Create a JSON response format with optional schema.
+    pub fn json(schema: Option<serde_json::Value>) -> Self {
+        Self {
+            format_type: ResponseFormatType::JsonObject,
+            json_schema: schema,
+        }
+    }
+
+    /// Create a JSON response format with a schema from a JSON string.
+    pub fn json_with_schema(schema_str: &str) -> Result<Self, serde_json::Error> {
+        let schema = serde_json::from_str(schema_str)?;
+        Ok(Self {
+            format_type: ResponseFormatType::JsonObject,
+            json_schema: Some(schema),
+        })
+    }
 }
 
 /// Agent state and configuration.
