@@ -3,7 +3,7 @@
 use bytes::Bytes;
 use letta_rs::client::ClientBuilder;
 use letta_rs::error::LettaResult;
-use letta_rs::types::agent::{Agent, CreateAgentRequest};
+use letta_rs::types::agent::{AgentState, CreateAgentRequest};
 use letta_rs::types::common::Metadata;
 use letta_rs::types::memory::Block;
 use letta_rs::types::source::{
@@ -35,7 +35,7 @@ fn get_filename_from_upload(response: FileUploadResponse) -> String {
 }
 
 /// Create a test agent for sources operations.
-async fn create_test_agent(client: &LettaClient) -> LettaResult<Agent> {
+async fn create_test_agent(client: &LettaClient) -> LettaResult<AgentState> {
     let request = CreateAgentRequest::builder()
         .name("Test Sources Agent")
         .model("letta/letta-free")

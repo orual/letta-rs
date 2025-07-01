@@ -34,7 +34,10 @@
       "WebFetch(domain:docs.rs)",
       "Bash(RUST_LOG=debug cargo test --test sources_api_test test_source_file_operations -- --test-threads=1 --nocapture 2 >& 1)",
       "Bash(export LETTA_API_KEY=\"sk-let-ZjJlYTE4ODYtNmRkZC00MDY4LThhNGMtZjQ3NGUxY2FmMTg1OmYxNWU1M2FhLTU4MDEtNGYwZi05MDFmLTgyYjg3ZDViNzlhZA==\")",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__get-library-docs",
+      "Bash(-w \"\\nHTTP Status: %{http_code}\\n\")"
     ],
     "deny": []
   }

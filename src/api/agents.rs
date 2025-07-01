@@ -2,9 +2,10 @@
 
 use crate::client::LettaClient;
 use crate::error::LettaResult;
+use crate::pagination::{PaginatedStream, PaginationExt};
 use crate::types::{
-    Agent, AgentsSearchRequest, AgentsSearchResponse, CreateAgentRequest, ImportAgentRequest,
-    LettaId, ListAgentsParams,
+    AgentState, AgentsSearchRequest, AgentsSearchResponse, CreateAgentRequest, ImportAgentRequest,
+    LettaId, ListAgentsParams, PaginationParams,
 };
 use reqwest::multipart::{Form, Part};
 use std::path::Path;
@@ -30,7 +31,7 @@ impl<'a> AgentApi<'a> {
     /// # Errors
     ///
     /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
-    pub async fn list(&self, params: Option<ListAgentsParams>) -> LettaResult<Vec<Agent>> {
+    pub async fn list(&self, params: Option<ListAgentsParams>) -> LettaResult<Vec<AgentState>> {
         self.client
             .get_with_query("v1/agents", &params.unwrap_or_default())
             .await
@@ -45,7 +46,7 @@ impl<'a> AgentApi<'a> {
     /// # Errors
     ///
     /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
-    pub async fn create(&self, request: CreateAgentRequest) -> LettaResult<Agent> {
+    pub async fn create(&self, request: CreateAgentRequest) -> LettaResult<AgentState> {
         self.client.post("v1/agents", &request).await
     }
 
@@ -58,7 +59,7 @@ impl<'a> AgentApi<'a> {
     /// # Errors
     ///
     /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
-    pub async fn get(&self, agent_id: &LettaId) -> LettaResult<Agent> {
+    pub async fn get(&self, agent_id: &LettaId) -> LettaResult<AgentState> {
         self.client.get(&format!("v1/agents/{}", agent_id)).await
     }
 
@@ -94,7 +95,7 @@ impl<'a> AgentApi<'a> {
         &self,
         agent_id: &LettaId,
         max_message_length: u32,
-    ) -> LettaResult<Agent> {
+    ) -> LettaResult<AgentState> {
         // Empty body for POST with query params
         self.client
             .post(
@@ -150,7 +151,7 @@ impl<'a> AgentApi<'a> {
         &self,
         file_path: &Path,
         request: ImportAgentRequest,
-    ) -> LettaResult<Agent> {
+    ) -> LettaResult<AgentState> {
         // Read the file
         let file_content = tokio::fs::read(file_path).await?;
         let file_name = file_path
@@ -205,6 +206,87 @@ impl<'a> AgentApi<'a> {
     /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
     pub async fn search(&self, request: AgentsSearchRequest) -> LettaResult<AgentsSearchResponse> {
         self.client.post("v1/agents/search", &request).await
+    }
+
+    /// List groups that an agent belongs to.
+    ///
+    /// # Arguments
+    ///
+    /// * `agent_id` - The ID of the agent whose groups to list
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    pub async fn list_groups(&self, agent_id: &LettaId) -> LettaResult<Vec<crate::types::Group>> {
+        self.client
+            .get(&format!("v1/agents/{}/groups", agent_id))
+            .await
+    }
+
+    /// List agents with pagination support.
+    ///
+    /// Returns a stream that automatically fetches subsequent pages as needed.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # use letta_rs::{LettaClient, ClientConfig};
+    /// # use letta_rs::types::PaginationParams;
+    /// # use futures::StreamExt;
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// # let client = LettaClient::new(ClientConfig::new("http://localhost:8283")?)?;
+    /// // Get all agents, fetching pages automatically
+    /// let mut stream = client.agents().paginated(None);
+    ///
+    /// while let Some(agent) = stream.next().await {
+    ///     let agent = agent?;
+    ///     println!("Agent: {}", agent.name);
+    /// }
+    ///
+    /// // Or collect all agents at once
+    /// let all_agents = client.agents()
+    ///     .paginated(Some(PaginationParams::new().limit(50)))
+    ///     .collect()
+    ///     .await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn paginated(&self, params: Option<PaginationParams>) -> PaginatedStream<AgentState> {
+        let client = self.client.clone();
+
+        // Convert PaginationParams to ListAgentsParams
+        let list_params = params.as_ref().map(|p| ListAgentsParams {
+            before: p.before.clone(),
+            after: p.after.clone(),
+            limit: p.limit,
+            ..Default::default()
+        });
+
+        PaginatedStream::new_with_id_cursor(
+            params,
+            move |page_params| {
+                let client = client.clone();
+                let mut effective_params = list_params.clone().unwrap_or_default();
+
+                // Update pagination fields from page_params
+                if let Some(p) = page_params {
+                    effective_params.before = p.before;
+                    effective_params.after = p.after;
+                    effective_params.limit = p.limit;
+                }
+
+                async move { client.agents().list(Some(effective_params)).await }
+            },
+            |agent| &agent.id,
+        )
+    }
+}
+
+impl<'a> PaginationExt for AgentApi<'a> {
+    type Item = AgentState;
+
+    fn paginated(&self, params: Option<PaginationParams>) -> PaginatedStream<Self::Item> {
+        self.paginated(params)
     }
 }
 

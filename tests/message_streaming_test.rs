@@ -3,7 +3,7 @@
 use futures::StreamExt;
 use letta_rs::client::ClientBuilder;
 use letta_rs::error::LettaResult;
-use letta_rs::types::agent::{Agent, AgentType, CreateAgentRequest};
+use letta_rs::types::agent::{AgentState, AgentType, CreateAgentRequest};
 use letta_rs::types::memory::Block;
 use letta_rs::types::message::{
     CreateMessagesRequest, MessageCreate, MessageCreateContent, MessageRole,
@@ -22,12 +22,15 @@ fn create_test_client() -> LettaResult<LettaClient> {
 }
 
 /// Create a test agent for message streaming.
-async fn create_test_agent(client: &LettaClient) -> LettaResult<Agent> {
+async fn create_test_agent(client: &LettaClient) -> LettaResult<AgentState> {
     create_test_agent_with_model(client, "letta/letta-free").await
 }
 
 /// Create a test agent with specific model.
-async fn create_test_agent_with_model(client: &LettaClient, model: &str) -> LettaResult<Agent> {
+async fn create_test_agent_with_model(
+    client: &LettaClient,
+    model: &str,
+) -> LettaResult<AgentState> {
     let request = CreateAgentRequest::builder()
         .name("Test Streaming Agent")
         .model(model)

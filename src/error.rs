@@ -181,7 +181,7 @@ impl Serialize for ErrorBody {
 #[derive(thiserror::Error, Debug)]
 pub enum LettaError {
     /// HTTP request failed.
-    #[error("HTTP request failed")]
+    #[error("HTTP request failed: {0}")]
     Http(#[from] reqwest::Error),
 
     /// Authentication failed.

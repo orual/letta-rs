@@ -7,6 +7,7 @@ use crate::types::HealthResponse;
 /// Miscellaneous API operations.
 #[derive(Debug)]
 pub struct MiscApi<'a> {
+    #[allow(dead_code)]
     client: &'a LettaClient,
 }
 

@@ -2,9 +2,10 @@
 
 use crate::client::LettaClient;
 use crate::error::{LettaError, LettaResult};
+use crate::pagination::PaginatedStream;
 use crate::types::{
     CreateMessagesRequest, LettaId, LettaMessageUnion, LettaResponse, LettaStopReason,
-    LettaUsageStatistics, ListMessagesRequest,
+    LettaUsageStatistics, ListMessagesRequest, PaginationParams,
 };
 use eventsource_stream::Eventsource;
 use futures::stream::{Stream, StreamExt};
@@ -96,7 +97,7 @@ impl<'a> MessageApi<'a> {
         &self,
         agent_id: &LettaId,
         add_default_initial_messages: Option<bool>,
-    ) -> LettaResult<crate::types::Agent> {
+    ) -> LettaResult<crate::types::AgentState> {
         let mut body = serde_json::Map::new();
         if let Some(add_default) = add_default_initial_messages {
             body.insert(
@@ -295,6 +296,90 @@ impl<'a> MessageApi<'a> {
         self.client
             .post(&format!("v1/agents/{}/messages/async", agent_id), &request)
             .await
+    }
+
+    /// List messages with pagination support.
+    ///
+    /// Returns a stream that automatically fetches subsequent pages as needed.
+    ///
+    /// # Arguments
+    ///
+    /// * `agent_id` - The ID of the agent whose messages to list
+    /// * `params` - Optional pagination parameters
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # use letta_rs::{LettaClient, ClientConfig};
+    /// # use letta_rs::types::{PaginationParams, LettaId};
+    /// # use futures::StreamExt;
+    /// # use std::str::FromStr;
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// # let client = LettaClient::new(ClientConfig::new("http://localhost:8283")?)?;
+    /// # let agent_id = LettaId::from_str("agent-00000000-0000-0000-0000-000000000000").unwrap();
+    /// // Get all messages, fetching pages automatically
+    /// let mut stream = client.messages().paginated(&agent_id, None);
+    ///
+    /// while let Some(message) = stream.next().await {
+    ///     let message = message?;
+    ///     println!("Message: {:?}", message);
+    /// }
+    ///
+    /// // Or collect all messages at once
+    /// let all_messages = client.messages()
+    ///     .paginated(&agent_id, Some(PaginationParams::new().limit(50)))
+    ///     .collect()
+    ///     .await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn paginated(
+        &self,
+        agent_id: &LettaId,
+        params: Option<PaginationParams>,
+    ) -> PaginatedStream<LettaMessageUnion> {
+        let client = self.client.clone();
+        let agent_id = agent_id.clone();
+
+        // Convert PaginationParams to ListMessagesRequest
+        let list_params = params.as_ref().map(|p| ListMessagesRequest {
+            before: p.before.clone(),
+            after: p.after.clone(),
+            limit: p.limit.map(|l| l as i32),
+            ..Default::default()
+        });
+
+        PaginatedStream::new_with_id_cursor(
+            params,
+            move |page_params| {
+                let client = client.clone();
+                let agent_id = agent_id.clone();
+                let mut effective_params = list_params.clone().unwrap_or_default();
+
+                // Update pagination fields from page_params
+                if let Some(p) = page_params {
+                    effective_params.before = p.before;
+                    effective_params.after = p.after;
+                    effective_params.limit = p.limit.map(|l| l as i32);
+                }
+
+                async move {
+                    client
+                        .messages()
+                        .list(&agent_id, Some(effective_params))
+                        .await
+                }
+            },
+            |message| match message {
+                LettaMessageUnion::SystemMessage(msg) => &msg.id,
+                LettaMessageUnion::UserMessage(msg) => &msg.id,
+                LettaMessageUnion::AssistantMessage(msg) => &msg.id,
+                LettaMessageUnion::ReasoningMessage(msg) => &msg.id,
+                LettaMessageUnion::HiddenReasoningMessage(msg) => &msg.id,
+                LettaMessageUnion::ToolCallMessage(msg) => &msg.id,
+                LettaMessageUnion::ToolReturnMessage(msg) => &msg.id,
+            },
+        )
     }
 }
 

@@ -1,6 +1,6 @@
 //! Test agent deserialization step by step.
 
-use letta_rs::types::Agent;
+use letta_rs::types::AgentState;
 
 #[tokio::test]
 async fn test_agent_deserialization() {
@@ -21,7 +21,7 @@ async fn test_agent_deserialization() {
             );
 
             // Try to deserialize this specific agent
-            match serde_json::from_value::<Agent>(first_agent.clone()) {
+            match serde_json::from_value::<AgentState>(first_agent.clone()) {
                 Ok(agent) => {
                     println!("✅ Successfully deserialized agent: {}", agent.name);
                 }

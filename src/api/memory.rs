@@ -2,12 +2,13 @@
 
 use crate::client::LettaClient;
 use crate::error::LettaResult;
+use crate::pagination::PaginatedStream;
 use crate::types::{
     memory::{
         ArchivalMemoryQueryParams, Block, CreateArchivalMemoryRequest, Memory, Passage,
         UpdateArchivalMemoryRequest, UpdateMemoryBlockRequest,
     },
-    LettaId,
+    LettaId, PaginationParams,
 };
 
 /// Memory API operations.
@@ -60,7 +61,7 @@ impl<'a> MemoryApi<'a> {
         &self,
         agent_id: &LettaId,
         block_id: &LettaId,
-    ) -> LettaResult<crate::types::agent::Agent> {
+    ) -> LettaResult<crate::types::agent::AgentState> {
         let url = format!(
             "/v1/agents/{}/core-memory/blocks/attach/{}",
             agent_id, block_id
@@ -73,7 +74,7 @@ impl<'a> MemoryApi<'a> {
         &self,
         agent_id: &LettaId,
         block_id: &LettaId,
-    ) -> LettaResult<crate::types::agent::Agent> {
+    ) -> LettaResult<crate::types::agent::AgentState> {
         let url = format!(
             "/v1/agents/{}/core-memory/blocks/detach/{}",
             agent_id, block_id
@@ -147,7 +148,7 @@ impl<'a> MemoryApi<'a> {
         &self,
         agent_id: &LettaId,
         tool_id: &LettaId,
-    ) -> LettaResult<crate::types::agent::Agent> {
+    ) -> LettaResult<crate::types::agent::AgentState> {
         let url = format!("/v1/agents/{}/tools/attach/{}", agent_id, tool_id);
         self.client.patch_no_body(&url).await
     }
@@ -157,9 +158,85 @@ impl<'a> MemoryApi<'a> {
         &self,
         agent_id: &LettaId,
         tool_id: &LettaId,
-    ) -> LettaResult<crate::types::agent::Agent> {
+    ) -> LettaResult<crate::types::agent::AgentState> {
         let url = format!("/v1/agents/{}/tools/detach/{}", agent_id, tool_id);
         self.client.patch_no_body(&url).await
+    }
+
+    /// List archival memory with pagination support.
+    ///
+    /// Returns a stream that automatically fetches subsequent pages as needed.
+    ///
+    /// # Arguments
+    ///
+    /// * `agent_id` - The ID of the agent whose archival memory to list
+    /// * `params` - Optional pagination parameters
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # use letta_rs::{LettaClient, ClientConfig};
+    /// # use letta_rs::types::{PaginationParams, LettaId};
+    /// # use futures::StreamExt;
+    /// # use std::str::FromStr;
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// # let client = LettaClient::new(ClientConfig::new("http://localhost:8283")?)?;
+    /// # let agent_id = LettaId::from_str("agent-00000000-0000-0000-0000-000000000000").unwrap();
+    /// // Get all archival memory passages, fetching pages automatically
+    /// let mut stream = client.memory().archival_paginated(&agent_id, None);
+    ///
+    /// while let Some(passage) = stream.next().await {
+    ///     let passage = passage?;
+    ///     println!("Passage: {}", passage.text);
+    /// }
+    ///
+    /// // Or search with pagination
+    /// let all_passages = client.memory()
+    ///     .archival_paginated(&agent_id, Some(PaginationParams::new().limit(50)))
+    ///     .collect()
+    ///     .await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn archival_paginated(
+        &self,
+        agent_id: &LettaId,
+        params: Option<PaginationParams>,
+    ) -> PaginatedStream<Passage> {
+        let client = self.client.clone();
+        let agent_id = agent_id.clone();
+
+        // Convert PaginationParams to ArchivalMemoryQueryParams
+        let query_params = params.as_ref().map(|p| ArchivalMemoryQueryParams {
+            before: p.before.clone(),
+            after: p.after.clone(),
+            limit: p.limit,
+            ..Default::default()
+        });
+
+        PaginatedStream::new_with_id_cursor(
+            params,
+            move |page_params| {
+                let client = client.clone();
+                let agent_id = agent_id.clone();
+                let mut effective_params = query_params.clone().unwrap_or_default();
+
+                // Update pagination fields from page_params
+                if let Some(p) = page_params {
+                    effective_params.before = p.before;
+                    effective_params.after = p.after;
+                    effective_params.limit = p.limit;
+                }
+
+                async move {
+                    client
+                        .memory()
+                        .list_archival_memory(&agent_id, Some(effective_params))
+                        .await
+                }
+            },
+            |passage| &passage.id,
+        )
     }
 }
 

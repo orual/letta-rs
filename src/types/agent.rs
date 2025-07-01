@@ -376,7 +376,7 @@ pub struct ResponseFormat {
 
 /// Agent state and configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Agent {
+pub struct AgentState {
     /// Unique identifier for the agent.
     pub id: LettaId,
     /// Agent name.
@@ -758,7 +758,7 @@ pub struct ImportAgentRequest {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentsSearchResponse {
     /// List of matching agents.
-    pub agents: Vec<Agent>,
+    pub agents: Vec<AgentState>,
     /// Cursor for pagination.
     #[serde(rename = "nextCursor")]
     pub next_cursor: Option<String>,
@@ -892,7 +892,7 @@ mod tests {
 
     #[test]
     fn test_agent_serialization() {
-        let agent = Agent {
+        let agent = AgentState {
             id: LettaId::from_str("agent-00000000-0000-0000-0000-000000000000").unwrap(),
             name: "Test Agent".to_string(),
             system: Some("You are a helpful assistant".to_string()),
@@ -943,7 +943,7 @@ mod tests {
         };
 
         let json = serde_json::to_string(&agent).unwrap();
-        let deserialized: Agent = serde_json::from_str(&json).unwrap();
+        let deserialized: AgentState = serde_json::from_str(&json).unwrap();
         assert_eq!(agent.name, deserialized.name);
     }
 

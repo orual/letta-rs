@@ -2,6 +2,7 @@
 
 use letta_rs::types::{
     AgentType, AgentsSearchRequest, CreateAgentRequest, ImportAgentRequest, ListAgentsParams,
+    ToolRule,
 };
 use letta_rs::{ClientConfig, LettaClient, LettaId};
 use std::path::Path;
@@ -196,4 +197,75 @@ async fn test_local_server_error_handling() {
     );
 
     println!("✅ Error handling tests passed!");
+}
+
+#[test]
+fn test_tool_rule_serialization() {
+    // Test that our tool rule enum serializes correctly
+    let rules = vec![
+        ToolRule::ContinueLoop {
+            tool_name: "test_tool".to_string(),
+            prompt_template: None,
+        },
+        ToolRule::MaxCountPerStep {
+            tool_name: "limited_tool".to_string(),
+            prompt_template: Some("Limited to {{max_count_limit}} calls".to_string()),
+            max_count_limit: 3,
+        },
+        ToolRule::Conditional {
+            tool_name: "conditional_tool".to_string(),
+            prompt_template: None,
+            default_child: Some("default_action".to_string()),
+            child_output_mapping: std::collections::HashMap::from([
+                ("success".to_string(), "success_handler".to_string()),
+                ("error".to_string(), "error_handler".to_string()),
+            ]),
+            require_output_mapping: true,
+        },
+    ];
+
+    for rule in rules {
+        let json = serde_json::to_string_pretty(&rule).unwrap();
+        println!("Tool rule JSON:\n{}\n", json);
+
+        // Verify we can deserialize it back
+        let deserialized: ToolRule = serde_json::from_str(&json).unwrap();
+
+        // Verify the deserialized rule matches the original
+        match (&rule, &deserialized) {
+            (
+                ToolRule::ContinueLoop { tool_name: t1, .. },
+                ToolRule::ContinueLoop { tool_name: t2, .. },
+            ) => {
+                assert_eq!(t1, t2);
+            }
+            (
+                ToolRule::MaxCountPerStep {
+                    max_count_limit: l1,
+                    ..
+                },
+                ToolRule::MaxCountPerStep {
+                    max_count_limit: l2,
+                    ..
+                },
+            ) => {
+                assert_eq!(l1, l2);
+            }
+            (
+                ToolRule::Conditional {
+                    require_output_mapping: r1,
+                    ..
+                },
+                ToolRule::Conditional {
+                    require_output_mapping: r2,
+                    ..
+                },
+            ) => {
+                assert_eq!(r1, r2);
+            }
+            _ => panic!("Rule type mismatch"),
+        }
+    }
+
+    println!("✅ Tool rule serialization tests passed!");
 }

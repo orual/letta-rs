@@ -817,7 +817,7 @@ pub struct CreateMessagesRequest {
     pub assistant_message_tool_name: Option<String>,
     /// Assistant message tool kwargs.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub assistant_message_tool_kwarg: Option<String>,
+    pub assistant_message_tool_kwargs: Option<String>,
     /// Filter response message types.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub include_return_message_types: Option<Vec<MessageType>>,
@@ -846,7 +846,7 @@ pub struct ListMessagesRequest {
     pub assistant_message_tool_name: Option<String>,
     /// Assistant message tool kwargs.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub assistant_message_tool_kwarg: Option<String>,
+    pub assistant_message_tool_kwargs: Option<String>,
 }
 
 // =============================================================================
@@ -919,84 +919,4 @@ pub enum UpdateAssistantMessageContent {
     ContentParts(Vec<ContentPart>),
 }
 
-// =============================================================================
-// Async Message/Job Types
-// =============================================================================
-
-/// Status of a job/run.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum JobStatus {
-    /// Job was created.
-    Created,
-    /// Job is running.
-    Running,
-    /// Job completed successfully.
-    Completed,
-    /// Job failed.
-    Failed,
-    /// Job is pending.
-    Pending,
-    /// Job was cancelled.
-    Cancelled,
-    /// Job expired.
-    Expired,
-}
-
-/// Type of job.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum JobType {
-    /// Regular job.
-    Job,
-    /// Run (message processing).
-    Run,
-    /// Batch job.
-    Batch,
-}
-
-/// Representation of a run for async message processing.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Run {
-    /// The unique identifier of the run.
-    pub id: LettaId,
-    /// The status of the run.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub status: Option<JobStatus>,
-    /// The type of job.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub job_type: Option<JobType>,
-    /// When the job was created.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub created_at: Option<Timestamp>,
-    /// When the job was completed.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub completed_at: Option<Timestamp>,
-    /// Created by user ID.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub created_by_id: Option<LettaId>,
-    /// Last updated by user ID.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub last_updated_by_id: Option<LettaId>,
-    /// When the run was last updated.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub updated_at: Option<Timestamp>,
-    /// Job metadata.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<serde_json::Value>,
-    /// Callback URL for completion notification.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub callback_url: Option<String>,
-    /// When callback was last attempted.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub callback_sent_at: Option<Timestamp>,
-    /// HTTP status code from callback.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub callback_status_code: Option<i32>,
-    /// Error message from callback attempt.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub callback_error: Option<String>,
-    /// Request configuration for the run.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub request_config: Option<serde_json::Value>,
-}
+// Note: Async message/job types (Run, JobStatus, JobType) have been moved to types/runs.rs

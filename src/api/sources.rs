@@ -2,7 +2,7 @@
 
 use crate::client::LettaClient;
 use crate::error::LettaResult;
-use crate::types::agent::Agent;
+use crate::types::agent::AgentState;
 use crate::types::memory::Passage;
 use crate::types::source::{
     CreateSourceRequest, FileMetadata, FileUploadResponse, GetFileParams, ListFilesParams,
@@ -164,7 +164,7 @@ impl<'a> AgentSourceApi<'a> {
     }
 
     /// Attach a source to the agent.
-    pub async fn attach(&self, source_id: &LettaId) -> LettaResult<Agent> {
+    pub async fn attach(&self, source_id: &LettaId) -> LettaResult<AgentState> {
         self.client
             .patch(
                 &format!("v1/agents/{}/sources/attach/{}", self.agent_id, source_id),
@@ -174,7 +174,7 @@ impl<'a> AgentSourceApi<'a> {
     }
 
     /// Detach a source from the agent.
-    pub async fn detach(&self, source_id: &LettaId) -> LettaResult<Agent> {
+    pub async fn detach(&self, source_id: &LettaId) -> LettaResult<AgentState> {
         self.client
             .patch(
                 &format!("v1/agents/{}/sources/detach/{}", self.agent_id, source_id),

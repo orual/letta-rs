@@ -4,7 +4,7 @@ use bytes::Bytes;
 use letta_rs::auth::AuthConfig;
 use letta_rs::client::ClientBuilder;
 use letta_rs::error::LettaResult;
-use letta_rs::types::agent::{Agent, CreateAgentRequest};
+use letta_rs::types::agent::{AgentState, CreateAgentRequest};
 use letta_rs::types::memory::Block;
 use letta_rs::types::source::{CreateSourceRequest, Source, UpdateSourceRequest};
 use letta_rs::LettaClient;
@@ -25,7 +25,7 @@ fn create_cloud_client() -> LettaResult<LettaClient> {
 }
 
 /// Create a test agent for cloud sources operations.
-async fn create_test_agent(client: &LettaClient) -> LettaResult<Agent> {
+async fn create_test_agent(client: &LettaClient) -> LettaResult<AgentState> {
     let request = CreateAgentRequest::builder()
         .name("Cloud Test Sources Agent")
         .model("letta/letta-free")

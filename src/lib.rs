@@ -68,6 +68,7 @@ pub mod auth;
 pub mod client;
 pub mod environment;
 pub mod error;
+pub mod pagination;
 pub mod retry;
 pub mod streaming;
 pub mod types;
