@@ -1,23 +1,12 @@
 {
   "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "./scripts/claude-branch-protection.sh"
-          }
-        ]
-      }
-    ],
     "PostToolUse": [
       {
         "matcher": "Write|Edit|MultiEdit",
         "hooks": [
           {
             "type": "command",
-            "command": "./scripts/claude-code-quality.sh"
+            "command": "bash ~/.claude/scripts/claude-code-quality-rust.sh"
           }
         ]
       }

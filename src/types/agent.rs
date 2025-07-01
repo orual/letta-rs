@@ -20,7 +20,7 @@ pub struct AgentEnvironmentVariable {
     /// When the object was last updated.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub updated_at: Option<Timestamp>,
-    /// The human-friendly ID of the agent environment variable.
+    /// The unique identifier of the agent environment variable.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<LettaId>,
     /// The name of the environment variable.
@@ -36,18 +36,17 @@ pub struct AgentEnvironmentVariable {
 
 /// Agent type enum.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-
 pub enum AgentType {
     /// Standard memgpt-style agent.
     #[serde(rename = "memgpt_agent")]
     MemGPT,
-    /// version 2 memgpt agent.
+    /// Version 2 memgpt agent.
     #[serde(rename = "memgpt_v2_agent")]
     MemGPTv2,
     /// React agent.
     #[serde(rename = "react_agent")]
     React,
-    /// Workflow agent
+    /// Workflow agent.
     #[serde(rename = "workflow_agent")]
     Workflow,
     /// Split-thread agent
@@ -95,10 +94,10 @@ pub struct LLMConfig {
     /// Model wrapper.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub model_wrapper: Option<String>,
-    /// Put inner thoughts in kwargs.
+    /// Whether to include inner thoughts in function keyword arguments.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub put_inner_thoughts_in_kwargs: Option<bool>,
-    /// Handle.
+    /// Provider-specific handle or identifier.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub handle: Option<String>,
     /// Temperature.
@@ -121,11 +120,11 @@ pub struct LLMConfig {
     pub extra: HashMap<String, serde_json::Value>,
 }
 
-/// Available Model endpoints
+/// Available model endpoint types
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum ModelEndpointType {
-    /// Open AI
+    /// OpenAI
     Openai,
     /// Anthropic
     Anthropic,
@@ -172,7 +171,7 @@ pub enum ModelEndpointType {
     Other,
 }
 
-/// Available embedding endpoints
+/// Available embedding endpoint types
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum EmbeddingEndpointType {
@@ -224,7 +223,7 @@ pub struct EmbeddingConfig {
     /// Embedding chunk size.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub embedding_chunk_size: Option<u32>,
-    /// Handle.
+    /// Provider-specific handle or identifier.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub handle: Option<String>,
     /// Azure-specific configuration (flattened into the JSON).
@@ -296,7 +295,7 @@ pub enum ToolRule {
         /// Optional prompt template.
         #[serde(skip_serializing_if = "Option::is_none")]
         prompt_template: Option<String>,
-        /// The max limit for the total number of times this tool can be invoked in a single step.
+        /// Maximum number of times this tool can be invoked in a single step.
         max_count_limit: u32,
     },
     /// Conditional tool mapping based on output.
@@ -309,7 +308,7 @@ pub enum ToolRule {
         /// The default child tool to be called.
         #[serde(skip_serializing_if = "Option::is_none")]
         default_child: Option<String>,
-        /// The output case to check for mapping.
+        /// Mapping from tool output values to child tool names.
         child_output_mapping: HashMap<String, String>,
         /// Whether to throw an error when output doesn't match any case.
         #[serde(default)]
@@ -430,7 +429,7 @@ pub struct AgentState {
     /// Message IDs.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub message_ids: Vec<LettaId>,
-    /// Multi-agent group configuration.
+    /// Configuration for multi-agent group participation.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub multi_agent_group: Option<serde_json::Value>,
     /// Template ID.
@@ -457,7 +456,7 @@ pub struct AgentState {
     /// Last run duration in milliseconds.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub last_run_duration_ms: Option<u64>,
-    /// Enable sleeptime.
+    /// Whether to enable sleeptime mode for the agent.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub enable_sleeptime: Option<bool>,
     /// Response format configuration.
@@ -537,7 +536,7 @@ pub struct CreateAgentRequest {
     /// Enable reasoner.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub enable_reasoner: Option<bool>,
-    /// Message buffer auto-clear.
+    /// Whether to automatically clear the message buffer.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub message_buffer_autoclear: Option<bool>,
     /// Block IDs to attach.
@@ -582,7 +581,7 @@ pub struct CreateAgentRequest {
     /// Identity IDs.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub identity_ids: Option<Vec<LettaId>>,
-    /// Enable sleeptime.
+    /// Whether to enable sleeptime mode for the agent.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub enable_sleeptime: Option<bool>,
 }

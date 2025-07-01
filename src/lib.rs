@@ -4,7 +4,7 @@
 //!
 //! Letta is a platform for building stateful AI agents with persistent memory and context
 //! across conversations. This client provides a comprehensive, idiomatic Rust interface
-//! to all Letta API endpoints.
+//! to all Letta API endpoints with full type safety.
 //!
 //! ## Quick Start
 //!
@@ -61,6 +61,7 @@
 #![deny(rustdoc::broken_intra_doc_links)]
 #![warn(clippy::all)]
 #![warn(clippy::pedantic)]
+#![warn(clippy::nursery)]
 #![allow(clippy::module_name_repetitions)]
 
 pub mod api;
@@ -79,6 +80,12 @@ pub use client::{ClientBuilder, ClientConfig, LettaClient};
 pub use environment::LettaEnvironment;
 pub use error::{LettaError, LettaResult};
 pub use types::*;
+
+/// Maximum number of retries for API calls
+pub const MAX_RETRIES: u32 = 3;
+
+/// Convenience type alias for Results in this crate.
+pub type Result<T> = std::result::Result<T, LettaError>;
 
 // Re-export streaming types
 pub use api::messages::{MessageStream, StreamingEvent};

@@ -15,9 +15,9 @@ pub struct ClientConfig {
     pub base_url: Url,
     /// Authentication configuration.
     pub auth: AuthConfig,
-    /// Request timeout.
+    /// Request timeout duration.
     pub timeout: Duration,
-    /// Additional headers to include with requests.
+    /// Additional headers to include with all requests.
     pub headers: HeaderMap,
 }
 
@@ -28,7 +28,7 @@ impl ClientConfig {
         Ok(Self {
             base_url,
             auth: AuthConfig::default(),
-            timeout: Duration::from_secs(30),
+            timeout: Duration::from_secs(60),
             headers: HeaderMap::new(),
         })
     }
@@ -255,7 +255,12 @@ impl LettaClient {
         retry_with_config(&self.retry_config, || async {
             let mut headers = HeaderMap::new();
             self.auth().apply_to_headers(&mut headers)?;
-            headers.insert("Content-Type", "application/json".parse().unwrap());
+            headers.insert(
+                "Content-Type",
+                "application/json"
+                    .parse()
+                    .map_err(|_| LettaError::config("Failed to parse Content-Type header"))?,
+            );
 
             let response = self
                 .http()
@@ -296,7 +301,12 @@ impl LettaClient {
         retry_with_config(&self.retry_config, || async {
             let mut headers = HeaderMap::new();
             self.auth().apply_to_headers(&mut headers)?;
-            headers.insert("Content-Type", "application/json".parse().unwrap());
+            headers.insert(
+                "Content-Type",
+                "application/json"
+                    .parse()
+                    .map_err(|_| LettaError::config("Failed to parse Content-Type header"))?,
+            );
 
             let response = self
                 .http()
@@ -374,7 +384,12 @@ impl LettaClient {
         retry_with_config(&self.retry_config, || async {
             let mut headers = HeaderMap::new();
             self.auth().apply_to_headers(&mut headers)?;
-            headers.insert("Content-Type", "application/json".parse().unwrap());
+            headers.insert(
+                "Content-Type",
+                "application/json"
+                    .parse()
+                    .map_err(|_| LettaError::config("Failed to parse Content-Type header"))?,
+            );
 
             let response = self
                 .http()
@@ -420,7 +435,12 @@ impl LettaClient {
         retry_with_config(&self.retry_config, || async {
             let mut headers = HeaderMap::new();
             self.auth().apply_to_headers(&mut headers)?;
-            headers.insert("Content-Type", "application/json".parse().unwrap());
+            headers.insert(
+                "Content-Type",
+                "application/json"
+                    .parse()
+                    .map_err(|_| LettaError::config("Failed to parse Content-Type header"))?,
+            );
 
             // Add extra headers
             for (key, value) in extra_headers.iter() {
@@ -581,7 +601,12 @@ impl LettaClient {
         retry_with_config(&self.retry_config, || async {
             let mut headers = HeaderMap::new();
             self.auth().apply_to_headers(&mut headers)?;
-            headers.insert("Content-Type", "application/json".parse().unwrap());
+            headers.insert(
+                "Content-Type",
+                "application/json"
+                    .parse()
+                    .map_err(|_| LettaError::config("Failed to parse Content-Type header"))?,
+            );
 
             // Add extra headers
             for (key, value) in extra_headers.iter() {

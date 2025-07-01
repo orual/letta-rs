@@ -3,6 +3,22 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Development Principles
+
+- Run `cargo check` frequently when producing code. This will help you catch errors early.
+- NEVER use `unsafe{}`. If you feel you need to, stop, think about other ways, and ask the user for help if needed.
+- NEVER ignore a failing test or change a test to make your code pass
+- NEVER ignore a test
+- ALWAYS fix compile errors before moving on.
+- **ALWAYS ENSURE that tests will fail (via assert or panic with descriptive message) on any error condition**
+- Use proper error handling with detailed context (LettaError types)
+- Follow existing patterns for consistency
+- Verify API behavior with curl when implementing new endpoints
+- Use the web or context7 to help find docs, in addition to any other reference material
+- Check TypeScript/Python SDKs for API patterns and expected behavior
+- Test with local Letta server before assuming implementation is correct
+
+
 ## Project Overview
 
 This project is a Rust client library for the Letta REST API. Letta is a stateful AI agent platform that enables building agents with persistent memory and context across conversations. The library provides idiomatic Rust bindings for all Letta API endpoints, with a CLI tool included for testing and development purposes.
@@ -80,10 +96,6 @@ pre-commit run --all-files
 nix flake update
 ```
 
-### Development Instructions
-Run `cargo check` frequently when producing code. This will help you catch errors early.
-NEVER use `unsafe{}`. If you feel you need to, stop, think about other ways, and ask the user for help if needed.
-NEVER ignore a failing test or change a test to make your code pass unless you can clearly demonstrate to the user that the test itself is a problem and needs to be changed.
 
 ### Testing
 ```bash
@@ -283,7 +295,7 @@ The library provides a generic `PaginatedStream` that supports automatic cursor-
 - Pagination support added with string-based cursors
 - Full tool lifecycle management
 
-### Sources API  
+### Sources API
 - Added pagination for files (`paginated_files()`) and passages (`paginated_passages()`)
 - Both use string-based cursor pagination
 
@@ -301,17 +313,3 @@ The library provides a generic `PaginatedStream` that supports automatic cursor-
 3. **Low Priority**:
    - Voice API (voice conversation support)
    - Examples directory with common use cases
-
-## Development Principles
-
-- NEVER ignore a test
-- **ALWAYS ENSURE that tests will fail (via assert or panic with descriptive message) on any error condition**
-- Use proper error handling with detailed context (LettaError types)
-- Follow existing patterns for consistency
-- Verify API behavior with curl when implementing new endpoints
-
-## Development Guidance
-
-- Use the web or context7 to help find docs, in addition to any other reference material
-- Check TypeScript/Python SDKs for API patterns and expected behavior
-- Test with local Letta server before assuming implementation is correct
