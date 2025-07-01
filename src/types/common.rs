@@ -224,6 +224,36 @@ impl PaginationParams {
     }
 }
 
+/// Pagination parameters for APIs that only support forward pagination.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct AfterOnlyPaginationParams {
+    /// Cursor for pagination (after this ID).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub after: Option<String>,
+    /// Maximum number of items to return.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub limit: Option<u32>,
+}
+
+impl AfterOnlyPaginationParams {
+    /// Create new pagination parameters.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Set the after cursor.
+    pub fn after(mut self, after: impl Into<String>) -> Self {
+        self.after = Some(after.into());
+        self
+    }
+
+    /// Set the limit.
+    pub fn limit(mut self, limit: u32) -> Self {
+        self.limit = Some(limit);
+        self
+    }
+}
+
 /// Generic response wrapper for paginated results.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PaginatedResponse<T> {
