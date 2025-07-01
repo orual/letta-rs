@@ -2,6 +2,7 @@
 
 use bon::Builder;
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 
 use super::{LettaId, ProviderCategory};
 
@@ -122,6 +123,46 @@ impl std::fmt::Display for ProviderType {
             Self::Bedrock => write!(f, "bedrock"),
             Self::Other => write!(f, "other"),
         }
+    }
+}
+
+impl std::str::FromStr for ProviderType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "anthropic" => Ok(Self::Anthropic),
+            "openai" => Ok(Self::Openai),
+            "azure" => Ok(Self::Azure),
+            "google_ai" => Ok(Self::GoogleAi),
+            "groq" => Ok(Self::Groq),
+            "cohere" => Ok(Self::Cohere),
+            "together" => Ok(Self::Together),
+            "mistral" => Ok(Self::Mistral),
+            "ollama" => Ok(Self::Ollama),
+            "vllm" => Ok(Self::Vllm),
+            "lmstudio" => Ok(Self::LmStudio),
+            "kobold" => Ok(Self::Kobold),
+            "replicate" => Ok(Self::Replicate),
+            "openrouter" => Ok(Self::OpenRouter),
+            "perplexity" => Ok(Self::Perplexity),
+            "recursal" => Ok(Self::Recursal),
+            "fireworks" => Ok(Self::Fireworks),
+            "anyscale" => Ok(Self::Anyscale),
+            "cloudflare" => Ok(Self::Cloudflare),
+            "voyage" => Ok(Self::Voyage),
+            "bedrock" => Ok(Self::Bedrock),
+            "other" => Ok(Self::Other),
+            _ => Err(format!("Unknown provider type: {}", s)),
+        }
+    }
+}
+
+impl<'a> TryFrom<&'a str> for ProviderType {
+    type Error = String;
+
+    fn try_from(value: &'a str) -> Result<Self, Self::Error> {
+        Self::from_str(value)
     }
 }
 

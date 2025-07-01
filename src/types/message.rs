@@ -756,6 +756,17 @@ impl From<&str> for MessageCreateContent {
     }
 }
 
+impl From<Vec<String>> for MessageCreateContent {
+    fn from(parts: Vec<String>) -> Self {
+        Self::ContentParts(
+            parts
+                .into_iter()
+                .map(|text| ContentPart::Text(TextContent { text }))
+                .collect(),
+        )
+    }
+}
+
 /// Individual content part for multi-modal messages.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]

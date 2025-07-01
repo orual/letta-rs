@@ -166,6 +166,15 @@ impl<'a> From<&'a LettaId> for String {
     }
 }
 
+// Allow direct conversion from &str to LettaId for convenience
+impl<'a> TryFrom<&'a str> for LettaId {
+    type Error = LettaIdError;
+
+    fn try_from(value: &'a str) -> Result<Self, Self::Error> {
+        Self::from_str(value)
+    }
+}
+
 /// Type alias for optional LettaId fields in structs.
 /// This helps with backwards compatibility and allows easier migration.
 pub type OptionalId = Option<LettaId>;

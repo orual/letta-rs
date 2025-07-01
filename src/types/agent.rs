@@ -116,6 +116,128 @@ pub struct LLMConfig {
     pub extra: HashMap<String, serde_json::Value>,
 }
 
+impl LLMConfig {
+    /// Create a configuration for OpenAI models.
+    ///
+    /// # Example
+    /// ```
+    /// # use letta_rs::types::agent::LLMConfig;
+    /// let config = LLMConfig::openai("gpt-4");
+    /// assert_eq!(config.model, "gpt-4");
+    /// ```
+    pub fn openai(model: impl Into<String>) -> Self {
+        Self {
+            model: model.into(),
+            model_endpoint_type: ModelEndpointType::Openai,
+            model_endpoint: None,
+            context_window: Some(128000), // GPT-4 default
+            provider_name: Some("openai".to_string()),
+            provider_category: None,
+            model_wrapper: None,
+            put_inner_thoughts_in_kwargs: None,
+            handle: None,
+            temperature: None,
+            max_tokens: None,
+            enable_reasoner: None,
+            reasoning_effort: None,
+            max_reasoning_tokens: None,
+            extra: HashMap::new(),
+        }
+    }
+
+    /// Create a configuration for Anthropic models.
+    ///
+    /// # Example
+    /// ```
+    /// # use letta_rs::types::agent::LLMConfig;
+    /// let config = LLMConfig::anthropic("claude-3-sonnet-20240229");
+    /// assert_eq!(config.model, "claude-3-sonnet-20240229");
+    /// ```
+    pub fn anthropic(model: impl Into<String>) -> Self {
+        Self {
+            model: model.into(),
+            model_endpoint_type: ModelEndpointType::Anthropic,
+            model_endpoint: None,
+            context_window: Some(200000), // Claude 3 default
+            provider_name: Some("anthropic".to_string()),
+            provider_category: None,
+            model_wrapper: None,
+            put_inner_thoughts_in_kwargs: None,
+            handle: None,
+            temperature: None,
+            max_tokens: None,
+            enable_reasoner: None,
+            reasoning_effort: None,
+            max_reasoning_tokens: None,
+            extra: HashMap::new(),
+        }
+    }
+
+    /// Create a configuration for local models.
+    ///
+    /// # Example
+    /// ```
+    /// # use letta_rs::types::agent::LLMConfig;
+    /// let config = LLMConfig::local("llama2", "http://localhost:8080");
+    /// assert_eq!(config.model, "llama2");
+    /// ```
+    pub fn local(model: impl Into<String>, endpoint: impl Into<String>) -> Self {
+        Self {
+            model: model.into(),
+            model_endpoint_type: ModelEndpointType::Ollama,
+            model_endpoint: Some(endpoint.into()),
+            context_window: Some(4096), // Conservative default
+            provider_name: Some("ollama".to_string()),
+            provider_category: None,
+            model_wrapper: None,
+            put_inner_thoughts_in_kwargs: None,
+            handle: None,
+            temperature: None,
+            max_tokens: None,
+            enable_reasoner: None,
+            reasoning_effort: None,
+            max_reasoning_tokens: None,
+            extra: HashMap::new(),
+        }
+    }
+
+    /// Set the context window size.
+    pub fn with_context_window(mut self, size: u32) -> Self {
+        self.context_window = Some(size);
+        self
+    }
+
+    /// Set the temperature.
+    pub fn with_temperature(mut self, temperature: f32) -> Self {
+        self.temperature = Some(temperature);
+        self
+    }
+
+    /// Set the max tokens.
+    pub fn with_max_tokens(mut self, max_tokens: u32) -> Self {
+        self.max_tokens = Some(max_tokens);
+        self
+    }
+
+    /// Set the model endpoint.
+    pub fn with_endpoint(mut self, endpoint: impl Into<String>) -> Self {
+        self.model_endpoint = Some(endpoint.into());
+        self
+    }
+
+    /// Enable reasoner with optional effort and token limits.
+    pub fn with_reasoner(mut self, effort: Option<&str>, max_tokens: Option<u32>) -> Self {
+        self.enable_reasoner = Some(true);
+        if let Some(e) = effort {
+            self.reasoning_effort = Some(e.to_string());
+        }
+        if let Some(t) = max_tokens {
+            self.max_reasoning_tokens = Some(t);
+        }
+        self
+    }
+}
+
 /// Available model endpoint types
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]

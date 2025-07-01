@@ -139,6 +139,132 @@ pub struct Block {
     pub updated_at: Option<Timestamp>,
 }
 
+impl Block {
+    /// Create a human memory block with common defaults.
+    ///
+    /// # Example
+    /// ```
+    /// # use letta_rs::types::memory::Block;
+    /// let block = Block::human("The human's name is Alice");
+    /// assert_eq!(block.label, "human");
+    /// assert_eq!(block.value, "The human's name is Alice");
+    /// ```
+    pub fn human(value: impl Into<String>) -> Self {
+        Self {
+            id: None,
+            label: "human".to_string(),
+            value: value.into(),
+            limit: Some(2000),
+            is_template: false,
+            preserve_on_migration: false,
+            read_only: false,
+            description: Some("Information about the human user".to_string()),
+            metadata: None,
+            name: None,
+            organization_id: None,
+            created_by_id: None,
+            last_updated_by_id: None,
+            created_at: None,
+            updated_at: None,
+        }
+    }
+
+    /// Create a persona memory block with common defaults.
+    ///
+    /// # Example
+    /// ```
+    /// # use letta_rs::types::memory::Block;
+    /// let block = Block::persona("I am a helpful assistant");
+    /// assert_eq!(block.label, "persona");
+    /// assert_eq!(block.value, "I am a helpful assistant");
+    /// ```
+    pub fn persona(value: impl Into<String>) -> Self {
+        Self {
+            id: None,
+            label: "persona".to_string(),
+            value: value.into(),
+            limit: Some(2000),
+            is_template: false,
+            preserve_on_migration: false,
+            read_only: false,
+            description: Some("The agent's persona".to_string()),
+            metadata: None,
+            name: None,
+            organization_id: None,
+            created_by_id: None,
+            last_updated_by_id: None,
+            created_at: None,
+            updated_at: None,
+        }
+    }
+
+    /// Create a custom memory block.
+    ///
+    /// # Example
+    /// ```
+    /// # use letta_rs::types::memory::Block;
+    /// let block = Block::new("system", "System information goes here")
+    ///     .with_limit(1000)
+    ///     .with_description("System-level information");
+    /// assert_eq!(block.label, "system");
+    /// ```
+    pub fn new(label: impl Into<String>, value: impl Into<String>) -> Self {
+        Self {
+            id: None,
+            label: label.into(),
+            value: value.into(),
+            limit: None,
+            is_template: false,
+            preserve_on_migration: false,
+            read_only: false,
+            description: None,
+            metadata: None,
+            name: None,
+            organization_id: None,
+            created_by_id: None,
+            last_updated_by_id: None,
+            created_at: None,
+            updated_at: None,
+        }
+    }
+
+    /// Set the character limit for this block.
+    pub fn with_limit(mut self, limit: u32) -> Self {
+        self.limit = Some(limit);
+        self
+    }
+
+    /// Set the description for this block.
+    pub fn with_description(mut self, description: impl Into<String>) -> Self {
+        self.description = Some(description.into());
+        self
+    }
+
+    /// Set the name for this block.
+    pub fn with_name(mut self, name: impl Into<String>) -> Self {
+        self.name = Some(name.into());
+        self
+    }
+
+    /// Mark this block as a template.
+    pub fn as_template(mut self) -> Self {
+        self.is_template = true;
+        self
+    }
+
+    /// Mark this block as read-only.
+    pub fn as_read_only(mut self) -> Self {
+        self.read_only = true;
+        self
+    }
+
+    /// Mark this block to be preserved on migration.
+    pub fn preserve_on_migration(mut self) -> Self {
+        self.preserve_on_migration = true;
+        self
+    }
+}
+
 /// Archival memory passage.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Passage {
