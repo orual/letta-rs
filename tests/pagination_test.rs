@@ -1,9 +1,9 @@
 //! Integration tests for pagination functionality.
 
 use futures::StreamExt;
-use letta_rs::client::{ClientConfig, LettaClient};
-use letta_rs::error::LettaResult;
-use letta_rs::types::*;
+use letta::client::{ClientConfig, LettaClient};
+use letta::error::LettaResult;
+use letta::types::*;
 use serial_test::serial;
 
 #[tokio::test]

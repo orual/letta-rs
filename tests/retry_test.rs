@@ -1,8 +1,8 @@
 //! Integration tests for retry logic.
 
-use letta_rs::client::ClientBuilder;
-use letta_rs::error::LettaError;
-use letta_rs::retry::RetryConfig;
+use letta::client::ClientBuilder;
+use letta::error::LettaError;
+use letta::retry::RetryConfig;
 use std::time::Duration;
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};

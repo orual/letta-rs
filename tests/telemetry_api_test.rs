@@ -1,7 +1,7 @@
 //! Integration tests for the Telemetry API.
 
-use letta_rs::client::{ClientConfig, LettaClient};
-use letta_rs::error::LettaResult;
+use letta::client::{ClientConfig, LettaClient};
+use letta::error::LettaResult;
 
 /// Get a test client for the local server.
 fn get_test_client() -> LettaResult<LettaClient> {
@@ -24,14 +24,14 @@ async fn test_retrieve_provider_trace() -> LettaResult<()> {
 
     // We expect this to fail with a 404 since the step doesn't exist
     match result {
-        Err(letta_rs::error::LettaError::NotFound { resource_type, id }) => {
+        Err(letta::error::LettaError::NotFound { resource_type, id }) => {
             println!("Expected NotFound error for non-existent step");
             println!("Resource type: {}, ID: {}", resource_type, id);
             // The error extraction identifies this as "ProviderTrace"
             assert_eq!(resource_type, "ProviderTrace");
             Ok(())
         }
-        Err(letta_rs::error::LettaError::Api { status: 404, .. }) => {
+        Err(letta::error::LettaError::Api { status: 404, .. }) => {
             println!("Got 404 API error (alternative match)");
             Ok(())
         }

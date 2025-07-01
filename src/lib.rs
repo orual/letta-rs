@@ -9,7 +9,7 @@
 //! ## Quick Start
 //!
 //! ```rust,no_run
-//! use letta_rs::{LettaClient, LettaEnvironment};
+//! use letta::{LettaClient, LettaEnvironment};
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -22,7 +22,7 @@
 //!     // Or use the builder for custom configuration
 //!     // let client = LettaClient::builder()
 //!     //     .environment(LettaEnvironment::Cloud)
-//!     //     .auth(letta_rs::auth::AuthConfig::bearer("your-token"))
+//!     //     .auth(letta::auth::AuthConfig::bearer("your-token"))
 //!     //     .base_url("https://custom.letta.com")  // optional override
 //!     //     .build()?;
 //!
@@ -37,7 +37,7 @@
 //! ## Creating and Interacting with Agents
 //!
 //! ```rust,no_run
-//! use letta_rs::{LettaClient, types::*};
+//! use letta::{LettaClient, types::*};
 //! use futures::StreamExt;
 //!
 //! #[tokio::main]
@@ -108,7 +108,7 @@
 //! ## Memory Management
 //!
 //! ```rust,no_run
-//! use letta_rs::{LettaClient, types::*};
+//! use letta::{LettaClient, types::*};
 //! use std::str::FromStr;
 //! use futures::StreamExt;
 //!
@@ -175,7 +175,7 @@
 //! ## Pagination Support
 //!
 //! ```rust,no_run
-//! use letta_rs::{LettaClient, types::*};
+//! use letta::{LettaClient, types::*};
 //! use futures::StreamExt;
 //! use std::str::FromStr;
 //!

@@ -122,7 +122,7 @@ impl LLMConfig {
     ///
     /// # Example
     /// ```
-    /// # use letta_rs::types::agent::LLMConfig;
+    /// # use letta::types::agent::LLMConfig;
     /// let config = LLMConfig::openai("gpt-4");
     /// assert_eq!(config.model, "gpt-4");
     /// ```
@@ -150,7 +150,7 @@ impl LLMConfig {
     ///
     /// # Example
     /// ```
-    /// # use letta_rs::types::agent::LLMConfig;
+    /// # use letta::types::agent::LLMConfig;
     /// let config = LLMConfig::anthropic("claude-3-sonnet-20240229");
     /// assert_eq!(config.model, "claude-3-sonnet-20240229");
     /// ```
@@ -178,7 +178,7 @@ impl LLMConfig {
     ///
     /// # Example
     /// ```
-    /// # use letta_rs::types::agent::LLMConfig;
+    /// # use letta::types::agent::LLMConfig;
     /// let config = LLMConfig::local("llama2", "http://localhost:8080");
     /// assert_eq!(config.model, "llama2");
     /// ```

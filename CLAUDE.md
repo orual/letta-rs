@@ -46,7 +46,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is the development guide for contributing to letta-rs, a Rust client library for the Letta REST API. This document contains internal implementation details, coding standards, and development workflows. For user documentation, see README.md.
+This is the development guide for contributing to letta, a Rust client library for the Letta REST API. This document contains internal implementation details, coding standards, and development workflows. For user documentation, see README.md.
 
 ### Implementation Status
 
@@ -180,7 +180,7 @@ LETTA_API_KEY=your-key nix run .#test-all
 
 ### Test Environment Setup
 
-1. **Local Server Tests**: 
+1. **Local Server Tests**:
    - Copy `server.env.example` to `server.env`
    - The example file contains minimal config for embedded PostgreSQL
    - Optional: Add your own API keys for Azure, Composio, etc.
@@ -233,86 +233,12 @@ cargo test --doc         # Doc tests
 - **Local Testing**: Use local-server/ for development
 - **Type Discovery**: Use `curl -v` against local server to inspect responses
 
-## Potential Ergonomic Improvements
+## Remaining Tasks
 
-### 1. Add Default Implementations
-Many request types with all-optional fields should implement `Default`:
-- `UpdateMemoryBlockRequest` - Currently requires listing all fields as None
-- `ListBlocksParams`, `ListToolsParams`, `UpdateBlockRequest`, `UpdateSourceRequest`
-- `ImportAgentRequest`, `AgentsSearchRequest`
-- `ListFilesParams`, `ListPassagesParams`
-
-### 2. Builder Patterns
-While `CreateAgentRequest` has a builder, these complex types need them too:
-- `CreateMessagesRequest` - Often just needs messages field
-- `CreateBlockRequest`, `CreateSourceRequest`, `CreateToolRequest`
-- `ProviderCreate`, `CreateIdentityRequest`
-- `MessageCreate` - Has convenience methods but builder would help complex cases
-
-### 3. Smart Constructors
-Common patterns that appear in tests could use convenience constructors:
-```rust
-// Instead of 15 fields with mostly None:
-Block::new("human", "The human's name is Bob")
-    .with_limit(1000)
-    .with_description("Human information")
-
-// LLM config shortcuts:
-LLMConfig::openai("gpt-4")
-LLMConfig::anthropic("claude-3")
-LLMConfig::local("llama2").with_endpoint("http://localhost:8080")
-```
-
-### 4. Missing From/Into Implementations
-- `impl From<&str> for LettaId` (for convenience in tests)
-- `impl From<Vec<String>> for MessageCreateContent` (for multi-part messages)
-- `impl TryFrom<&str> for ProviderType` (with proper error handling)
-
-### 5. Pagination Trait
-All pagination params follow same pattern but lack consistency:
-```rust
-trait PaginationExt {
-    fn limit(self, limit: u32) -> Self;
-    fn after(self, cursor: impl Into<String>) -> Self;
-}
-```
-
-### 6. Memory Block Presets
-Common memory blocks appear in every agent:
-```rust
-Block::human("Bob")  // Creates human memory block
-Block::persona("A helpful assistant")  // Creates persona block
-```
-
-### 7. Tool Rule Builders
-Complex enums like `ToolRule` need builders:
-```rust
-ToolRule::conditional("my_tool")
-    .with_mapping("yes", "approve_tool")
-    .with_mapping("no", "deny_tool")
-```
-
-### 8. Response Format Shortcuts
-```rust
-ResponseFormat::json(schema)
-ResponseFormat::text()
-```
-
-### 9. Test Helpers
-Common test patterns could have helpers:
-```rust
-CreateToolRequest::test_echo_tool("my_tool")
-CreateAgentRequest::test_agent("TestBot")
-```
-
-### 10. Error Context Methods
-Operations could add context to errors:
-```rust
-client.sources()
-    .upload_file(source_id, path)
-    .await
-    .context_file(path)?  // Adds file path to error
-```
+1. **Rename crate to `letta`** - Update Cargo.toml and all references
+2. **Documentation pass** - Update examples to use new ergonomic features
+3. **Finish CLI implementation** - Currently only generates JSON, needs to make actual API calls
+4. **Implement upsert-from-function** - Port Python SDK's function-based agent creation feature
 
 ## Recent Implementation Notes
 

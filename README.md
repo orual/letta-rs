@@ -1,11 +1,11 @@
-# letta-rs
+# letta
 
 A Rust client library for the [Letta](https://letta.com) REST API, providing idiomatic Rust bindings for building stateful AI agents with persistent memory and context.
 
 Unlike the Letta-provided TypeScript and Python libraries, this was not generated from the OpenAPI spec, but implemented by hand (with substantial LLM assistance). As such it exposes things in slightly different, mildly opinionated ways, and includes a number of Rust-oriented affordances.
 
-[![Crates.io](https://img.shields.io/crates/v/letta.svg)](https://crates.io/crates/letta-rs)
-[![Documentation](https://docs.rs/letta/badge.svg)](https://docs.rs/letta-rs)
+[![Crates.io](https://img.shields.io/crates/v/letta.svg)](https://crates.io/crates/letta)
+[![Documentation](https://docs.rs/letta/badge.svg)](https://docs.rs/letta)
 [![License](https://img.shields.io/crates/l/letta.svg)](LICENSE)
 
 ## Features
@@ -22,9 +22,16 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-letta = "0.1.0"
+letta = "0.1.2"
 tokio = { version = "1", features = ["full"] }
 ```
+
+## Compatibility
+
+| letta client | letta server |
+|--------------|--------------|
+| 0.1.2        | 0.8.8        |
+| 0.1.0-0.1.1  | 0.8.x        |
 
 ## Quick Start
 
@@ -248,8 +255,8 @@ match client.agents().get(&agent_id).await {
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/letta-rs
-cd letta-rs
+git clone https://github.com/yourusername/letta
+cd letta
 
 # Build the library
 cargo build

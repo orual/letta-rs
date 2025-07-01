@@ -1,7 +1,7 @@
 //! Integration tests for the cloud Letta API endpoints.
 
-use letta_rs::auth::AuthConfig;
-use letta_rs::{types::AgentsSearchRequest, ClientConfig, LettaClient, LettaId};
+use letta::auth::AuthConfig;
+use letta::{types::AgentsSearchRequest, ClientConfig, LettaClient, LettaId};
 use std::env;
 use std::str::FromStr;
 
@@ -125,9 +125,9 @@ async fn test_cloud_message_operations() {
 
     // Create a test agent for cloud message operations
     println!("Creating test agent for cloud message operations...");
-    let create_request = letta_rs::types::CreateAgentRequest::builder()
+    let create_request = letta::types::CreateAgentRequest::builder()
         .name("Cloud Message Test Agent")
-        .agent_type(letta_rs::types::AgentType::MemGPT)
+        .agent_type(letta::types::AgentType::MemGPT)
         .model("openai/gpt-4o-mini")
         .embedding("openai/text-embedding-3-small")
         .build();
@@ -151,10 +151,10 @@ async fn test_cloud_message_operations() {
 
     // Test 2: Send a message
     println!("\nTesting message creation...");
-    let message_request = letta_rs::types::CreateMessagesRequest {
-        messages: vec![letta_rs::types::MessageCreate {
-            role: letta_rs::types::MessageRole::User,
-            content: letta_rs::types::MessageCreateContent::String(
+    let message_request = letta::types::CreateMessagesRequest {
+        messages: vec![letta::types::MessageCreate {
+            role: letta::types::MessageRole::User,
+            content: letta::types::MessageCreateContent::String(
                 "Hello from Rust SDK cloud test!".to_string(),
             ),
             name: None,
@@ -182,7 +182,7 @@ async fn test_cloud_message_operations() {
 
             // Print response messages
             for (i, message) in response.messages.iter().enumerate() {
-                use letta_rs::types::LettaMessageUnion;
+                use letta::types::LettaMessageUnion;
                 let type_str = match message {
                     LettaMessageUnion::SystemMessage(_) => "System",
                     LettaMessageUnion::UserMessage(_) => "User",

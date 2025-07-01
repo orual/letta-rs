@@ -6,3 +6,5 @@
 .claude/settings.local.json
 /.pre-commit-config.yaml
 .mcp.json
+CLAUDE.md.local
+mcp-wrapper.sh

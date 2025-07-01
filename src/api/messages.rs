@@ -133,14 +133,14 @@ impl<'a> MessageApi<'a> {
     /// # Examples
     ///
     /// ```no_run
-    /// # use letta_rs::types::{MessageCreate, MessageRole, CreateMessagesRequest, MessageCreateContent};
-    /// # use letta_rs::api::messages::StreamingEvent;
-    /// # use letta_rs::LettaId;
+    /// # use letta::types::{MessageCreate, MessageRole, CreateMessagesRequest, MessageCreateContent};
+    /// # use letta::api::messages::StreamingEvent;
+    /// # use letta::LettaId;
     /// # use std::str::FromStr;
     /// # use futures::StreamExt;
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// # let client = letta_rs::LettaClient::new(
-    /// #     letta_rs::client::ClientConfig::new("http://localhost:8283")?
+    /// # let client = letta::LettaClient::new(
+    /// #     letta::client::ClientConfig::new("http://localhost:8283")?
     /// # )?;
     /// let mut stream = client
     ///     .messages()
@@ -310,8 +310,8 @@ impl<'a> MessageApi<'a> {
     /// # Examples
     ///
     /// ```no_run
-    /// # use letta_rs::{LettaClient, ClientConfig};
-    /// # use letta_rs::types::{PaginationParams, LettaId};
+    /// # use letta::{LettaClient, ClientConfig};
+    /// # use letta::types::{PaginationParams, LettaId};
     /// # use futures::StreamExt;
     /// # use std::str::FromStr;
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {

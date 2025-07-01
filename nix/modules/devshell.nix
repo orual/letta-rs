@@ -2,7 +2,7 @@
 {
   perSystem = { config, self', pkgs, lib, ... }: {
     devShells.default = pkgs.mkShell {
-      name = "letta-rs-shell";
+      name = "letta-shell";
       inputsFrom = [
         self'.devShells.rust
         config.pre-commit.devShell # See ./nix/modules/pre-commit.nix

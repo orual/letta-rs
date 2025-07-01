@@ -1,8 +1,8 @@
 //! Integration tests for the Voice API (beta).
 
-use letta_rs::client::{ClientConfig, LettaClient};
-use letta_rs::error::LettaResult;
-use letta_rs::types::*;
+use letta::client::{ClientConfig, LettaClient};
+use letta::error::LettaResult;
+use letta::types::*;
 use serde_json::json;
 use std::str::FromStr;
 

@@ -1,11 +1,11 @@
 //! Integration tests for the message API.
 
-use letta_rs::types::{
-    AgentType, Block, CreateAgentRequest, CreateMessagesRequest, MessageCreate,
-    MessageCreateContent, MessageRole, UpdateMessageRequest, UpdateUserMessage,
-    UpdateUserMessageContent,
+use letta::types::memory::Block;
+use letta::types::{
+    AgentType, CreateAgentRequest, CreateMessagesRequest, MessageCreate, MessageCreateContent,
+    MessageRole, UpdateMessageRequest, UpdateUserMessage, UpdateUserMessageContent,
 };
-use letta_rs::{ClientConfig, LettaClient};
+use letta::{ClientConfig, LettaClient};
 use serial_test::serial;
 
 #[tokio::test]
@@ -21,6 +21,8 @@ async fn test_local_server_message_operations() {
         .agent_type(AgentType::MemGPT)
         .model("letta/letta-free")
         .embedding("letta/letta-free")
+        .memory_block(Block::human("The human's name is User"))
+        .memory_block(Block::persona("I am a helpful assistant"))
         .build();
 
     let agent = client.agents().create(create_request).await.unwrap();
@@ -67,16 +69,16 @@ async fn test_local_server_message_operations() {
     // Print response messages
     for (i, message) in response.messages.iter().enumerate() {
         match message {
-            letta_rs::types::LettaMessageUnion::UserMessage(msg) => {
+            letta::types::LettaMessageUnion::UserMessage(msg) => {
                 println!("   Message {}: [User] {}", i + 1, msg.content);
             }
-            letta_rs::types::LettaMessageUnion::AssistantMessage(msg) => {
+            letta::types::LettaMessageUnion::AssistantMessage(msg) => {
                 println!("   Message {}: [Assistant] {}", i + 1, msg.content);
             }
-            letta_rs::types::LettaMessageUnion::SystemMessage(msg) => {
+            letta::types::LettaMessageUnion::SystemMessage(msg) => {
                 println!("   Message {}: [System] {}", i + 1, msg.content);
             }
-            letta_rs::types::LettaMessageUnion::ReasoningMessage(msg) => {
+            letta::types::LettaMessageUnion::ReasoningMessage(msg) => {
                 println!("   Message {}: [Reasoning] {}", i + 1, msg.reasoning);
             }
             _ => {
@@ -170,6 +172,8 @@ async fn test_update_user_message() {
         .agent_type(AgentType::MemGPT)
         .model("letta/letta-free")
         .embedding("letta/letta-free")
+        .memory_block(Block::human("The human's name is User"))
+        .memory_block(Block::persona("I am a helpful assistant"))
         .build();
 
     let agent = client.agents().create(create_request).await.unwrap();
@@ -199,7 +203,7 @@ async fn test_update_user_message() {
     let user_message_id = messages
         .iter()
         .find_map(|msg| match msg {
-            letta_rs::types::LettaMessageUnion::UserMessage(user_msg)
+            letta::types::LettaMessageUnion::UserMessage(user_msg)
                 if user_msg.content == "Original message content" =>
             {
                 Some(user_msg.id.clone())
@@ -221,7 +225,7 @@ async fn test_update_user_message() {
 
     // Verify the update
     match updated_message {
-        letta_rs::types::LettaMessageUnion::UserMessage(user_msg) => {
+        letta::types::LettaMessageUnion::UserMessage(user_msg) => {
             assert_eq!(user_msg.content, "Updated message content");
             println!("✅ Message update successful!");
         }
@@ -252,6 +256,8 @@ async fn test_create_async_message() {
         .agent_type(AgentType::MemGPT)
         .model("letta/letta-free")
         .embedding("letta/letta-free")
+        .memory_block(Block::human("The human's name is User"))
+        .memory_block(Block::persona("I am a helpful assistant"))
         .build();
 
     let agent = client.agents().create(create_request).await.unwrap();
@@ -281,9 +287,9 @@ async fn test_create_async_message() {
     // Check initial status
     if let Some(status) = run.status {
         match status {
-            letta_rs::types::JobStatus::Created
-            | letta_rs::types::JobStatus::Running
-            | letta_rs::types::JobStatus::Pending => {
+            letta::types::JobStatus::Created
+            | letta::types::JobStatus::Running
+            | letta::types::JobStatus::Pending => {
                 println!("   Run status: {:?}", status);
             }
             _ => panic!("Unexpected initial status: {:?}", status),
@@ -304,7 +310,7 @@ async fn test_create_async_message() {
 #[serial]
 async fn test_message_pagination() {
     use futures::StreamExt;
-    use letta_rs::types::PaginationParams;
+    use letta::types::PaginationParams;
 
     // Create client for local server
     let config = ClientConfig::new("http://localhost:8283").unwrap();
@@ -317,6 +323,8 @@ async fn test_message_pagination() {
         .agent_type(AgentType::MemGPT)
         .model("letta/letta-free")
         .embedding("letta/letta-free")
+        .memory_block(Block::human("The human's name is User"))
+        .memory_block(Block::persona("I am a helpful assistant"))
         .build();
 
     let agent = client.agents().create(create_request).await.unwrap();

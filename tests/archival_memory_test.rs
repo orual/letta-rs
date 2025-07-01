@@ -1,12 +1,12 @@
 //! Integration tests for archival memory API endpoints.
 
-use letta_rs::client::ClientBuilder;
-use letta_rs::error::LettaResult;
-use letta_rs::types::agent::CreateAgentRequest;
-use letta_rs::types::memory::{
+use letta::client::ClientBuilder;
+use letta::error::LettaResult;
+use letta::types::agent::CreateAgentRequest;
+use letta::types::memory::{
     ArchivalMemoryQueryParams, Block, CreateArchivalMemoryRequest, UpdateArchivalMemoryRequest,
 };
-use letta_rs::{LettaClient, LettaId};
+use letta::{LettaClient, LettaId};
 use serial_test::serial;
 
 /// Create a test client for the local server.

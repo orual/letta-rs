@@ -336,6 +336,7 @@ mod tests {
 
     #[derive(Debug, Clone)]
     struct TestItem {
+        #[allow(dead_code)]
         id: LettaId,
         name: String,
     }

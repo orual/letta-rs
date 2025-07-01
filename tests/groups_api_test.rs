@@ -1,7 +1,7 @@
 //! Integration tests for the Groups API.
 
-use letta_rs::client::{ClientConfig, LettaClient};
-use letta_rs::types::*;
+use letta::client::{ClientConfig, LettaClient};
+use letta::types::*;
 
 /// Get a test client for the local server.
 fn get_test_client() -> LettaClient {

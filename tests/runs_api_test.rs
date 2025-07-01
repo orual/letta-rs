@@ -1,8 +1,7 @@
 //! Integration tests for the Runs API.
 
-use letta_rs::client::{ClientConfig, LettaClient};
-use letta_rs::types::*;
-use std::str::FromStr;
+use letta::client::{ClientConfig, LettaClient};
+use letta::types::*;
 
 /// Get a test client for the local server.
 fn get_test_client() -> LettaClient {

@@ -175,8 +175,8 @@ impl<'a> MemoryApi<'a> {
     /// # Examples
     ///
     /// ```no_run
-    /// # use letta_rs::{LettaClient, ClientConfig};
-    /// # use letta_rs::types::{PaginationParams, LettaId};
+    /// # use letta::{LettaClient, ClientConfig};
+    /// # use letta::types::{PaginationParams, LettaId};
     /// # use futures::StreamExt;
     /// # use std::str::FromStr;
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {

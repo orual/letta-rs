@@ -156,9 +156,9 @@ impl<'a> SourceApi<'a> {
     /// # Example
     ///
     /// ```no_run
-    /// # use letta_rs::client::{ClientConfig, LettaClient};
-    /// # use letta_rs::{types::PaginationParams, pagination::PaginationExt};
-    /// # use letta_rs::types::LettaId;
+    /// # use letta::client::{ClientConfig, LettaClient};
+    /// # use letta::{types::PaginationParams, pagination::PaginationExt};
+    /// # use letta::types::LettaId;
     /// # use futures::StreamExt;
     /// # use std::str::FromStr;
     /// # #[tokio::main]
@@ -218,9 +218,9 @@ impl<'a> SourceApi<'a> {
     /// # Example
     ///
     /// ```no_run
-    /// # use letta_rs::client::{ClientConfig, LettaClient};
-    /// # use letta_rs::{types::PaginationParams, pagination::PaginationExt};
-    /// # use letta_rs::types::LettaId;
+    /// # use letta::client::{ClientConfig, LettaClient};
+    /// # use letta::{types::PaginationParams, pagination::PaginationExt};
+    /// # use letta::types::LettaId;
     /// # use futures::StreamExt;
     /// # use std::str::FromStr;
     /// # #[tokio::main]

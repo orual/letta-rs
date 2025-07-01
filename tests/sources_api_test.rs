@@ -1,16 +1,16 @@
 //! Integration tests for sources API endpoints.
 
 use bytes::Bytes;
-use letta_rs::client::ClientBuilder;
-use letta_rs::error::LettaResult;
-use letta_rs::types::agent::{AgentState, CreateAgentRequest};
-use letta_rs::types::common::Metadata;
-use letta_rs::types::memory::Block;
-use letta_rs::types::source::{
+use letta::client::ClientBuilder;
+use letta::error::LettaResult;
+use letta::types::agent::{AgentState, CreateAgentRequest};
+use letta::types::common::Metadata;
+use letta::types::memory::Block;
+use letta::types::source::{
     CreateSourceRequest, FileProcessingStatus, FileUploadResponse, GetFileParams, ListFilesParams,
     ListPassagesParams, Source, UpdateSourceRequest,
 };
-use letta_rs::{LettaClient, LettaId};
+use letta::{LettaClient, LettaId};
 use serial_test::serial;
 use std::collections::HashMap;
 use std::str::FromStr;

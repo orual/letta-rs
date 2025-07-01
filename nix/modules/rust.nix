@@ -60,7 +60,7 @@
       '';
     in
     {
-      rust-project.crates."letta-rs".crane.args = {
+      rust-project.crates."letta".crane.args = {
         # Enable checks
         doCheck = true;
 
@@ -94,10 +94,10 @@
       };
 
       packages = {
-        default = self'.packages.letta-rs;
+        default = self'.packages.letta;
 
         # Package for running tests with local server
-        letta-rs-with-tests = self'.packages.letta-rs.overrideAttrs (oldAttrs: {
+        letta-with-tests = self'.packages.letta.overrideAttrs (oldAttrs: {
           checkPhase = ''
             runHook preCheck
 
@@ -124,7 +124,7 @@
         test-local = {
           type = "app";
           program = toString (pkgs.writeShellScript "test-local-app" ''
-            cd ${self'.packages.letta-rs.src}
+            cd ${self'.packages.letta.src}
             ${testLocalServer}
           '');
         };
@@ -132,7 +132,7 @@
         test-cloud = {
           type = "app";
           program = toString (pkgs.writeShellScript "test-cloud-app" ''
-            cd ${self'.packages.letta-rs.src}
+            cd ${self'.packages.letta.src}
 
             if [ -z "''${LETTA_API_KEY:-}" ]; then
               echo "❌ LETTA_API_KEY environment variable is required"
@@ -147,7 +147,7 @@
         test-all = {
           type = "app";
           program = toString (pkgs.writeShellScript "test-all-app" ''
-            cd ${self'.packages.letta-rs.src}
+            cd ${self'.packages.letta.src}
 
             echo "🧪 Running all tests..."
 

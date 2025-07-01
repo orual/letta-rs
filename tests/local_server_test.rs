@@ -1,10 +1,10 @@
 //! Integration tests for the local Letta server.
 
-use letta_rs::types::{
+use letta::types::{
     AgentType, AgentsSearchRequest, CreateAgentRequest, ImportAgentRequest, ListAgentsParams,
     ToolRule,
 };
-use letta_rs::{ClientConfig, LettaClient, LettaId};
+use letta::{ClientConfig, LettaClient, LettaId};
 use std::path::Path;
 use std::str::FromStr;
 

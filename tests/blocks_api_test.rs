@@ -1,9 +1,9 @@
 //! Integration tests for blocks API endpoints.
 
-use letta_rs::client::ClientBuilder;
-use letta_rs::error::LettaResult;
-use letta_rs::types::{Block, CreateBlockRequest, ListBlocksParams, Metadata, UpdateBlockRequest};
-use letta_rs::{LettaClient, LettaId};
+use letta::client::ClientBuilder;
+use letta::error::LettaResult;
+use letta::types::{Block, CreateBlockRequest, ListBlocksParams, Metadata, UpdateBlockRequest};
+use letta::{LettaClient, LettaId};
 use serial_test::serial;
 use std::collections::HashMap;
 use std::str::FromStr;

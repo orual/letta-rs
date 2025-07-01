@@ -1,9 +1,9 @@
 //! Command-line interface for the Letta client.
 
 use clap::Parser;
-use letta_rs::types::agent::{AgentType, CreateAgentRequest};
-use letta_rs::types::memory::MemoryBlock;
-use letta_rs::{auth::AuthConfig, ClientConfig, LettaClient};
+use letta::types::agent::{AgentType, CreateAgentRequest};
+use letta::types::memory::Block;
+use letta::{auth::AuthConfig, ClientConfig, LettaClient};
 
 #[derive(Parser, Debug)]
 #[clap(author = "Orual", version, about = "Letta REST API client")]
@@ -151,7 +151,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 async fn list_agents(
-    client: &LettaClient,
+    _client: &LettaClient,
     limit: u32,
     tags: Vec<String>,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -162,7 +162,7 @@ async fn list_agents(
 }
 
 async fn create_agent(
-    client: &LettaClient,
+    _client: &LettaClient,
     name: String,
     system: Option<String>,
     agent_type: String,
@@ -199,7 +199,7 @@ async fn create_agent(
 
     // Add default memory blocks
     request = request
-        .memory_block(MemoryBlock {
+        .memory_block(Block {
             id: None,
             label: "human".to_string(),
             value: "The human's name is not yet known.".to_string(),
@@ -216,7 +216,7 @@ async fn create_agent(
             created_at: None,
             updated_at: None,
         })
-        .memory_block(MemoryBlock {
+        .memory_block(Block {
             id: None,
             label: "persona".to_string(),
             value: format!("I am {}, a helpful AI assistant.", name),
@@ -282,9 +282,9 @@ async fn create_agent(
 }
 
 async fn get_agent(
-    client: &LettaClient,
+    _client: &LettaClient,
     id: &str,
-    output: &str,
+    _output: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
     println!("Getting agent {}...", id);
     // TODO: Implement when agent API is ready
@@ -293,7 +293,7 @@ async fn get_agent(
 }
 
 async fn delete_agent(
-    client: &LettaClient,
+    _client: &LettaClient,
     id: &str,
     yes: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {

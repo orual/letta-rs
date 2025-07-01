@@ -1,13 +1,13 @@
 //! Cloud API integration tests for sources endpoints.
 
 use bytes::Bytes;
-use letta_rs::auth::AuthConfig;
-use letta_rs::client::ClientBuilder;
-use letta_rs::error::LettaResult;
-use letta_rs::types::agent::{AgentState, CreateAgentRequest};
-use letta_rs::types::memory::Block;
-use letta_rs::types::source::{CreateSourceRequest, Source, UpdateSourceRequest};
-use letta_rs::LettaClient;
+use letta::auth::AuthConfig;
+use letta::client::ClientBuilder;
+use letta::error::LettaResult;
+use letta::types::agent::{AgentState, CreateAgentRequest};
+use letta::types::memory::Block;
+use letta::types::source::{CreateSourceRequest, Source, UpdateSourceRequest};
+use letta::LettaClient;
 use serial_test::serial;
 use std::time::Duration;
 use tokio::time::sleep;
@@ -161,7 +161,7 @@ async fn test_cloud_file_upload_behavior() -> LettaResult<()> {
         )
         .await?;
 
-    use letta_rs::types::source::FileUploadResponse;
+    use letta::types::source::FileUploadResponse;
 
     match upload_result {
         FileUploadResponse::Job(job) => {
@@ -308,7 +308,7 @@ async fn test_cloud_passages_behavior() -> LettaResult<()> {
         )
         .await?;
 
-    use letta_rs::types::source::FileUploadResponse;
+    use letta::types::source::FileUploadResponse;
 
     let actual_filename = match upload_job {
         FileUploadResponse::Job(job) => job.metadata.as_ref().unwrap().filename.clone(),

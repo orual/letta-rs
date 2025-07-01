@@ -32,7 +32,7 @@ impl AuthConfig {
     /// # Examples
     ///
     /// ```rust
-    /// use letta_rs::auth::AuthConfig;
+    /// use letta::auth::AuthConfig;
     ///
     /// let auth = AuthConfig::bearer("your-api-key-here");
     /// ```
@@ -50,7 +50,7 @@ impl AuthConfig {
     /// # Examples
     ///
     /// ```rust
-    /// use letta_rs::auth::AuthConfig;
+    /// use letta::auth::AuthConfig;
     ///
     /// let auth = AuthConfig::none();
     /// ```
@@ -93,7 +93,7 @@ impl AuthConfig {
     /// # Examples
     ///
     /// ```rust
-    /// use letta_rs::auth::AuthConfig;
+    /// use letta::auth::AuthConfig;
     ///
     /// let auth = AuthConfig::bearer("token");
     /// assert!(auth.is_authenticated());
@@ -171,7 +171,7 @@ impl Default for AuthConfig {
 /// # Examples
 ///
 /// ```rust
-/// use letta_rs::auth::from_env;
+/// use letta::auth::from_env;
 ///
 /// // Assumes LETTA_API_KEY environment variable is set
 /// let auth = from_env().unwrap_or_default();
