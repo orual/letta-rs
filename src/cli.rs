@@ -3,7 +3,9 @@
 use clap::Parser;
 use letta::types::agent::{AgentType, CreateAgentRequest, ListAgentsParams};
 use letta::types::common::LettaId;
-use letta::types::memory::Block;
+use letta::types::memory::{
+    ArchivalMemoryQueryParams, Block, CreateArchivalMemoryRequest, UpdateMemoryBlockRequest,
+};
 use letta::types::message::{CreateMessagesRequest, MessageCreate, MessageRole};
 use letta::{auth::AuthConfig, ClientConfig, LettaClient};
 use std::io::Write;
@@ -43,6 +45,9 @@ enum Command {
     /// Message operations
     #[command(subcommand)]
     Message(MessageCommand),
+    /// Memory operations
+    #[command(subcommand)]
+    Memory(MemoryCommand),
     /// Health check
     Health,
 }
@@ -136,6 +141,59 @@ enum MessageCommand {
     },
 }
 
+#[derive(Parser, Debug)]
+enum MemoryCommand {
+    /// View agent's core memory
+    View {
+        /// Agent ID
+        #[arg(short = 'a', long)]
+        agent_id: String,
+        /// Output format (json, pretty, summary)
+        #[arg(short = 'o', long, default_value = "summary")]
+        output: String,
+    },
+    /// Edit a core memory block
+    Edit {
+        /// Agent ID
+        #[arg(short = 'a', long)]
+        agent_id: String,
+        /// Block label (human, persona, etc.)
+        #[arg(short = 'b', long)]
+        block: String,
+        /// New value for the block
+        value: String,
+        /// Output format (json, pretty, summary)
+        #[arg(short = 'o', long, default_value = "summary")]
+        output: String,
+    },
+    /// List archival memory
+    Archival {
+        /// Agent ID
+        #[arg(short = 'a', long)]
+        agent_id: String,
+        /// Search query
+        #[arg(short = 'q', long)]
+        query: Option<String>,
+        /// Maximum number of results
+        #[arg(short = 'l', long, default_value = "20")]
+        limit: u32,
+        /// Output format (json, pretty, summary)
+        #[arg(short = 'o', long, default_value = "summary")]
+        output: String,
+    },
+    /// Add to archival memory
+    Add {
+        /// Agent ID
+        #[arg(short = 'a', long)]
+        agent_id: String,
+        /// Text to add to archival memory
+        text: String,
+        /// Output format (json, pretty, summary)
+        #[arg(short = 'o', long, default_value = "summary")]
+        output: String,
+    },
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
@@ -203,6 +261,34 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 output,
             } => {
                 list_messages(&client, &agent_id, limit, &output).await?;
+            }
+        },
+        Command::Memory(mem_cmd) => match mem_cmd {
+            MemoryCommand::View { agent_id, output } => {
+                view_memory(&client, &agent_id, &output).await?;
+            }
+            MemoryCommand::Edit {
+                agent_id,
+                block,
+                value,
+                output,
+            } => {
+                edit_memory_block(&client, &agent_id, &block, &value, &output).await?;
+            }
+            MemoryCommand::Archival {
+                agent_id,
+                query,
+                limit,
+                output,
+            } => {
+                list_archival_memory(&client, &agent_id, query, limit, &output).await?;
+            }
+            MemoryCommand::Add {
+                agent_id,
+                text,
+                output,
+            } => {
+                add_archival_memory(&client, &agent_id, &text, &output).await?;
             }
         },
         Command::Health => {
@@ -704,6 +790,194 @@ async fn list_messages(
         },
         Err(e) => {
             eprintln!("Error listing messages: {}", e);
+            std::process::exit(1);
+        }
+    }
+
+    Ok(())
+}
+
+async fn view_memory(
+    client: &LettaClient,
+    agent_id: &str,
+    output: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let agent_id = LettaId::from_str(agent_id)?;
+
+    match client.memory().get_core_memory(&agent_id).await {
+        Ok(memory) => match output {
+            "json" => {
+                println!("{}", serde_json::to_string(&memory)?);
+            }
+            "pretty" => {
+                println!("{}", serde_json::to_string_pretty(&memory)?);
+            }
+            _ => {
+                println!("Core Memory for Agent:\n");
+                for block in &memory.blocks {
+                    println!("Block: {} ({})", block.label, block.limit.unwrap_or(0));
+                    println!("{}", "-".repeat(50));
+                    println!("{}\n", block.value);
+                }
+            }
+        },
+        Err(e) => {
+            eprintln!("Error retrieving memory: {}", e);
+            std::process::exit(1);
+        }
+    }
+
+    Ok(())
+}
+
+async fn edit_memory_block(
+    client: &LettaClient,
+    agent_id: &str,
+    block_label: &str,
+    new_value: &str,
+    output: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let agent_id = LettaId::from_str(agent_id)?;
+
+    let request = UpdateMemoryBlockRequest {
+        value: Some(new_value.to_string()),
+        ..Default::default()
+    };
+
+    match client
+        .memory()
+        .update_core_memory_block(&agent_id, block_label, request)
+        .await
+    {
+        Ok(block) => match output {
+            "json" => {
+                println!("{}", serde_json::to_string(&block)?);
+            }
+            "pretty" => {
+                println!("{}", serde_json::to_string_pretty(&block)?);
+            }
+            _ => {
+                println!("Memory block updated successfully!");
+                println!("\nUpdated Block:");
+                println!("  Label: {}", block.label);
+                println!("  Value: {}", block.value);
+                if let Some(limit) = block.limit {
+                    println!("  Limit: {} characters", limit);
+                }
+            }
+        },
+        Err(e) => {
+            eprintln!("Error updating memory block: {}", e);
+            std::process::exit(1);
+        }
+    }
+
+    Ok(())
+}
+
+async fn list_archival_memory(
+    client: &LettaClient,
+    agent_id: &str,
+    query: Option<String>,
+    limit: u32,
+    output: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let agent_id = LettaId::from_str(agent_id)?;
+
+    let params = ArchivalMemoryQueryParams {
+        search: query,
+        limit: Some(limit),
+        ..Default::default()
+    };
+
+    match client
+        .memory()
+        .list_archival_memory(&agent_id, Some(params))
+        .await
+    {
+        Ok(passages) => match output {
+            "json" => {
+                println!("{}", serde_json::to_string(&passages)?);
+            }
+            "pretty" => {
+                println!("{}", serde_json::to_string_pretty(&passages)?);
+            }
+            _ => {
+                if passages.is_empty() {
+                    println!("No archival memory found.");
+                } else {
+                    println!("Found {} archival memory passages:\n", passages.len());
+                    for (i, passage) in passages.iter().enumerate() {
+                        println!(
+                            "{}. [{}]",
+                            i + 1,
+                            passage
+                                .created_at
+                                .as_ref()
+                                .map(|t| t.to_string())
+                                .unwrap_or_else(|| "unknown".to_string())
+                        );
+                        println!("   {}", passage.text);
+                        if let Some(embed_vec) = &passage.embedding {
+                            println!("   Embedding: {} dimensions", embed_vec.len());
+                        }
+                        println!();
+                    }
+                }
+            }
+        },
+        Err(e) => {
+            eprintln!("Error listing archival memory: {}", e);
+            std::process::exit(1);
+        }
+    }
+
+    Ok(())
+}
+
+async fn add_archival_memory(
+    client: &LettaClient,
+    agent_id: &str,
+    text: &str,
+    output: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let agent_id = LettaId::from_str(agent_id)?;
+
+    let request = CreateArchivalMemoryRequest {
+        text: text.to_string(),
+    };
+
+    match client
+        .memory()
+        .create_archival_memory(&agent_id, request)
+        .await
+    {
+        Ok(passages) => match output {
+            "json" => {
+                println!("{}", serde_json::to_string(&passages)?);
+            }
+            "pretty" => {
+                println!("{}", serde_json::to_string_pretty(&passages)?);
+            }
+            _ => {
+                println!("Archival memory added successfully!");
+                if let Some(passage) = passages.first() {
+                    println!("\nAdded Passage:");
+                    println!("  ID: {}", passage.id);
+                    println!("  Text: {}", passage.text);
+                    println!(
+                        "  Created: {}",
+                        passage
+                            .created_at
+                            .as_ref()
+                            .map(|t| t.to_string())
+                            .unwrap_or_else(|| "unknown".to_string())
+                    );
+                }
+            }
+        },
+        Err(e) => {
+            eprintln!("Error adding archival memory: {}", e);
             std::process::exit(1);
         }
     }
