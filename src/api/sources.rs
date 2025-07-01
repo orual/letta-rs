@@ -2,13 +2,14 @@
 
 use crate::client::LettaClient;
 use crate::error::LettaResult;
+use crate::pagination::PaginatedStream;
 use crate::types::agent::AgentState;
 use crate::types::memory::Passage;
 use crate::types::source::{
     CreateSourceRequest, FileMetadata, FileUploadResponse, GetFileParams, ListFilesParams,
     ListPassagesParams, Source, UpdateSourceRequest,
 };
-use crate::types::LettaId;
+use crate::types::{LettaId, PaginationParams};
 use bytes::Bytes;
 use reqwest::multipart::{Form, Part};
 use serde_json::Value;
@@ -140,6 +141,126 @@ impl<'a> SourceApi<'a> {
     /// Get agent source sub-API for a specific agent.
     pub fn agent_sources(&self, agent_id: LettaId) -> AgentSourceApi {
         AgentSourceApi::new(self.client, agent_id)
+    }
+
+    /// Get a paginated stream of files for a source.
+    ///
+    /// This method returns a [`PaginatedStream`] that automatically handles pagination
+    /// and allows streaming through all files using async iteration.
+    ///
+    /// # Arguments
+    ///
+    /// * `source_id` - The ID of the source
+    /// * `params` - Optional pagination parameters
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # use letta_rs::client::{ClientConfig, LettaClient};
+    /// # use letta_rs::pagination::{PaginationParams, PaginationExt};
+    /// # use letta_rs::types::LettaId;
+    /// # use futures::StreamExt;
+    /// # use std::str::FromStr;
+    /// # #[tokio::main]
+    /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = LettaClient::new(ClientConfig::new("http://localhost:8283")?)?;
+    /// let source_id = LettaId::from_str("source-123")?;
+    ///
+    /// let mut stream = client.sources().paginated_files(&source_id, None);
+    /// while let Some(file) = stream.next().await {
+    ///     let file = file?;
+    ///     println!("File: {} - Size: {}", file.filename, file.size);
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn paginated_files(
+        &self,
+        source_id: &LettaId,
+        params: Option<PaginationParams>,
+    ) -> PaginatedStream<FileMetadata> {
+        let client = self.client.clone();
+        let source_id = source_id.clone();
+        let fetch_fn = move |params: Option<PaginationParams>| {
+            let client = client.clone();
+            let source_id = source_id.clone();
+            async move {
+                let list_params = params.map(|p| ListFilesParams {
+                    after: p.after,
+                    limit: p.limit.map(|l| l as i32),
+                    include_content: None,
+                });
+
+                client.sources().list_files(&source_id, list_params).await
+            }
+        };
+
+        PaginatedStream::new_with_string_cursor(params, fetch_fn, |file: &FileMetadata| {
+            file.id
+                .as_ref()
+                .map(|id| id.to_string())
+                .unwrap_or_default()
+        })
+    }
+
+    /// Get a paginated stream of passages for a source.
+    ///
+    /// This method returns a [`PaginatedStream`] that automatically handles pagination
+    /// and allows streaming through all passages using async iteration.
+    ///
+    /// # Arguments
+    ///
+    /// * `source_id` - The ID of the source
+    /// * `params` - Optional pagination parameters
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # use letta_rs::client::{ClientConfig, LettaClient};
+    /// # use letta_rs::pagination::{PaginationParams, PaginationExt};
+    /// # use letta_rs::types::LettaId;
+    /// # use futures::StreamExt;
+    /// # use std::str::FromStr;
+    /// # #[tokio::main]
+    /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = LettaClient::new(ClientConfig::new("http://localhost:8283")?)?;
+    /// let source_id = LettaId::from_str("source-123")?;
+    ///
+    /// let mut stream = client.sources().paginated_passages(&source_id, None);
+    /// while let Some(passage) = stream.next().await {
+    ///     let passage = passage?;
+    ///     println!("Passage: {}", passage.text);
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn paginated_passages(
+        &self,
+        source_id: &LettaId,
+        params: Option<PaginationParams>,
+    ) -> PaginatedStream<Passage> {
+        let client = self.client.clone();
+        let source_id = source_id.clone();
+        let fetch_fn = move |params: Option<PaginationParams>| {
+            let client = client.clone();
+            let source_id = source_id.clone();
+            async move {
+                let list_params = params.map(|p| ListPassagesParams {
+                    after: p.after,
+                    before: p.before,
+                    limit: p.limit.map(|l| l as i32),
+                });
+
+                client
+                    .sources()
+                    .list_passages(&source_id, list_params)
+                    .await
+            }
+        };
+
+        PaginatedStream::new_with_string_cursor(params, fetch_fn, |passage: &Passage| {
+            passage.id.to_string()
+        })
     }
 }
 

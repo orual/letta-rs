@@ -1,41 +1,36 @@
 //! Integration tests for the Providers API.
 
 use letta_rs::client::{ClientConfig, LettaClient};
+use letta_rs::error::LettaResult;
 use letta_rs::types::*;
 
 /// Get a test client for the local server.
-fn get_test_client() -> LettaClient {
-    let config = ClientConfig::new("http://localhost:8283").unwrap();
-    LettaClient::new(config).unwrap()
+fn get_test_client() -> LettaResult<LettaClient> {
+    let config = ClientConfig::new("http://localhost:8283")?;
+    LettaClient::new(config)
 }
 
 #[tokio::test]
-async fn test_list_providers() {
-    let client = get_test_client();
+async fn test_list_providers() -> LettaResult<()> {
+    let client = get_test_client()?;
 
     // List all providers
-    let result = client.providers().list(None).await;
+    let providers = client.providers().list(None).await?;
 
-    match result {
-        Ok(providers) => {
-            println!("Found {} providers", providers.len());
-            for provider in providers.iter().take(5) {
-                println!(
-                    "Provider: {} - Type: {} - Category: {}",
-                    provider.name, provider.provider_type, provider.provider_category
-                );
-            }
-        }
-        Err(e) => {
-            eprintln!("Failed to list providers: {:?}", e);
-            // Providers might be empty, which is fine for a test
-        }
+    println!("Found {} providers", providers.len());
+    for provider in providers.iter().take(5) {
+        println!(
+            "Provider: {} - Type: {} - Category: {}",
+            provider.name, provider.provider_type, provider.provider_category
+        );
     }
+
+    Ok(())
 }
 
 #[tokio::test]
-async fn test_provider_crud() {
-    let client = get_test_client();
+async fn test_provider_crud() -> LettaResult<()> {
+    let client = get_test_client()?;
 
     // Create a provider
     let create_req = ProviderCreate {
@@ -50,19 +45,8 @@ async fn test_provider_crud() {
         metadata: None,
     };
 
-    let provider = match client.providers().create(create_req).await {
-        Ok(p) => {
-            println!("Created provider: {} ({})", p.name, p.id);
-            p
-        }
-        Err(e) => {
-            eprintln!("Failed to create provider: {:#?}", e);
-            if let letta_rs::error::LettaError::Api { body, .. } = &e {
-                eprintln!("Response body: {:#?}", body);
-            }
-            panic!("Provider creation failed");
-        }
-    };
+    let provider = client.providers().create(create_req).await?;
+    println!("Created provider: {} ({})", provider.name, provider.id);
 
     // Update the provider (only api_key, access_key, and region can be updated)
     let update_req = ProviderUpdate {
@@ -71,30 +55,20 @@ async fn test_provider_crud() {
         region: None,
     };
 
-    match client.providers().update(&provider.id, update_req).await {
-        Ok(updated) => {
-            println!("Updated provider: {} - API key changed", updated.name);
-            // We can't verify the API key changed since it's encrypted/hidden
-        }
-        Err(e) => {
-            eprintln!("Failed to update provider: {:?}", e);
-        }
-    }
+    let updated = client.providers().update(&provider.id, update_req).await?;
+    println!("Updated provider: {} - API key changed", updated.name);
+    // We can't verify the API key changed since it's encrypted/hidden
 
     // Delete the provider
-    match client.providers().delete(&provider.id).await {
-        Ok(_) => {
-            println!("Successfully deleted provider");
-        }
-        Err(e) => {
-            eprintln!("Failed to delete provider: {:?}", e);
-        }
-    }
+    client.providers().delete(&provider.id).await?;
+    println!("Successfully deleted provider");
+
+    Ok(())
 }
 
 #[tokio::test]
-async fn test_list_providers_with_filter() {
-    let client = get_test_client();
+async fn test_list_providers_with_filter() -> LettaResult<()> {
+    let client = get_test_client()?;
 
     // List providers with filter (use Byok since that's what we create)
     let params = ListProvidersParams {
@@ -102,48 +76,37 @@ async fn test_list_providers_with_filter() {
         ..Default::default()
     };
 
-    let result = client.providers().list(Some(params)).await;
+    let providers = client.providers().list(Some(params)).await?;
 
-    match result {
-        Ok(providers) => {
-            println!("Found {} BYOK providers", providers.len());
-            for provider in &providers {
-                assert_eq!(provider.provider_category, ProviderCategory::Byok);
-            }
-        }
-        Err(e) => {
-            eprintln!("Failed to list filtered providers: {:?}", e);
-        }
+    println!("Found {} BYOK providers", providers.len());
+    for provider in &providers {
+        assert_eq!(provider.provider_category, ProviderCategory::Byok);
     }
+
+    Ok(())
 }
 
 #[tokio::test]
 #[ignore = "Provider check may fail depending on provider configuration"]
-async fn test_provider_check() {
-    let client = get_test_client();
+async fn test_provider_check() -> LettaResult<()> {
+    let client = get_test_client()?;
 
     // First, list providers to find one to check
-    let providers = match client.providers().list(None).await {
-        Ok(p) => p,
-        Err(_) => {
-            println!("No providers available to check");
-            return;
-        }
-    };
+    let providers = client.providers().list(None).await.unwrap_or_default();
+
+    if providers.is_empty() {
+        println!("No providers available to check");
+        return Ok(());
+    }
 
     if let Some(provider) = providers.first() {
-        match client.providers().check(&provider.id).await {
-            Ok(check_result) => {
-                println!("Provider check status: {}", check_result.status);
-                if let Some(error) = check_result.error {
-                    println!("Provider check error: {}", error);
-                }
-            }
-            Err(e) => {
-                eprintln!("Failed to check provider: {:?}", e);
-            }
+        let check_result = client.providers().check(&provider.id).await?;
+
+        println!("Provider check status: {}", check_result.status);
+        if let Some(error) = check_result.error {
+            println!("Provider check error: {}", error);
         }
-    } else {
-        println!("No providers available to check");
     }
+
+    Ok(())
 }

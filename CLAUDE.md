@@ -26,11 +26,11 @@ The implementation includes all major API categories from the official specifica
 - ✅ **Models**: Model configuration and management (LLM and embedding models)
 - ✅ **Tags**: Tag management system with pagination support
 - ✅ **Providers**: LLM provider management with full CRUD operations
+- ✅ **Identities**: Identity management with CRUD operations and pagination
 - ✅ **Authentication**: Bearer token-based API authentication
 - ✅ **Misc**: Provider listing endpoint
 
 **Remaining APIs to Implement:**
-- ❌ **Identities**: Identity management for agents
 - ❌ **Telemetry**: Usage tracking and analytics
 - ❌ **Batches**: Batch processing operations
 - ❌ **Voice**: Voice conversation support
@@ -166,7 +166,7 @@ The Nix configuration uses flake-parts for modularity and imports rust-flake for
 
 ### Key Dependencies
 - `clap` (4.5+) with derive and env features for CLI argument parsing
-- Development tools: just, bacon, nixd, cargo-doc-live
+- Development tools: just, bacon, nixd, cargo-doc-live, docker compose
 
 ### Agent Type System
 
@@ -211,6 +211,7 @@ The crate uses a sophisticated error handling system matching the TypeScript/Pyt
 - **Vector Storage**: Semantic search capabilities for archival memory
 - **Tool Execution**: Dynamic tool loading and execution framework
 - **File Handling**: Document upload and processing pipeline
+- **Header Parameters**: Support for custom headers like `X-Project` and `user-id` (see HEADER_PARAMETERS.md)
 
 ### Pagination Pattern
 All list endpoints use cursor-based pagination with `before`, `after`, `limit` parameters.
@@ -225,10 +226,12 @@ The library provides a generic `PaginatedStream` that supports automatic cursor-
 - ✅ `memory.archival_paginated()` - Pagination for archival memory with ID-based cursors
 - ✅ `tags.paginated()` - Pagination with string-based cursors
 - ✅ `providers.paginated()` - Pagination with ID-based cursors
+- ✅ `tools.paginated()` - Pagination with string-based cursors
+- ✅ `sources.paginated_files()` - Pagination for file lists with string-based cursors
+- ✅ `sources.paginated_passages()` - Pagination for passage lists with string-based cursors
+- ✅ `identities.paginated()` - Pagination with string-based cursors
 
 **APIs that could support pagination (have cursor params):**
-- ⬜ Tools API - `list()` has before/after/limit params
-- ⬜ Sources API - `list_files()` and `list_passages()` have pagination params
 - ⬜ Groups API - Group messages may support pagination
 
 **APIs without cursor-based pagination support:**
@@ -266,14 +269,30 @@ The library provides a generic `PaginatedStream` that supports automatic cursor-
 - `api_key` is required for creation
 - Updates limited to: `api_key`, `access_key`, `region` only
 - Provider types include: OpenAI, Anthropic, Azure, Google AI, Groq, Cohere, etc.
-- Delete endpoint returns JSON response with success message
+- Delete endpoint returns null response (204 No Content)
+
+### Identities API
+- Full CRUD operations with LettaId-based IDs (format: `identity-<uuid>`)
+- Supports identity types: User, Org, Other (serialized as lowercase)
+- Upsert endpoint only supports updating existing identities (returns 404 for non-existent)
+- Properties system for flexible metadata storage
+- Delete endpoint returns null response (204 No Content)
+- Pagination support with string-based cursors
+
+### Tools API
+- Pagination support added with string-based cursors
+- Full tool lifecycle management
+
+### Sources API  
+- Added pagination for files (`paginated_files()`) and passages (`paginated_passages()`)
+- Both use string-based cursor pagination
 
 ## Implementation Priorities
 
 1. **High Priority**:
-   - Identities API (for agent identity management)
-   - Pagination for Tools API
-   - Pagination for Sources files/passages
+   - ~~Identities API (for agent identity management)~~ ✅ Completed
+   - ~~Pagination for Tools API~~ ✅ Completed
+   - ~~Pagination for Sources files/passages~~ ✅ Completed
 
 2. **Medium Priority**:
    - Telemetry API (usage tracking)

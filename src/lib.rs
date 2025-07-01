@@ -15,21 +15,21 @@
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!     // Connect to local Letta server
 //!     let client = LettaClient::local()?;
-//!     
+//!
 //!     // Or connect to Letta Cloud with an API token
 //!     // let client = LettaClient::cloud("your-api-token")?;
-//!     
+//!
 //!     // Or use the builder for custom configuration
 //!     // let client = LettaClient::builder()
 //!     //     .environment(LettaEnvironment::Cloud)
 //!     //     .auth(letta_rs::auth::AuthConfig::bearer("your-token"))
 //!     //     .base_url("https://custom.letta.com")  // optional override
 //!     //     .build()?;
-//!     
+//!
 //!     // List all agents
 //!     let agents = client.agents().list(None).await?;
 //!     println!("Found {} agents", agents.len());
-//!     
+//!
 //!     Ok(())
 //! }
 //! ```

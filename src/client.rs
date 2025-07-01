@@ -44,6 +44,41 @@ impl ClientConfig {
         self.timeout = timeout;
         self
     }
+
+    /// Set additional headers to include with all requests.
+    pub fn headers(mut self, headers: HeaderMap) -> Self {
+        self.headers = headers;
+        self
+    }
+
+    /// Add a single header to include with all requests.
+    pub fn header(mut self, key: impl AsRef<str>, value: impl AsRef<str>) -> LettaResult<Self> {
+        let key = key.as_ref();
+        let value = value.as_ref();
+
+        let header_name = reqwest::header::HeaderName::from_bytes(key.as_bytes())
+            .map_err(|_| LettaError::validation(format!("Invalid header name: {}", key)))?;
+        let header_value = reqwest::header::HeaderValue::from_str(value).map_err(|_| {
+            LettaError::validation(format!("Invalid header value for {}: {}", key, value))
+        })?;
+
+        self.headers.insert(header_name, header_value);
+        Ok(self)
+    }
+
+    /// Set the X-Project header for all requests.
+    ///
+    /// This associates all operations with a specific project context.
+    pub fn project(self, project_id: impl AsRef<str>) -> LettaResult<Self> {
+        self.header("X-Project", project_id)
+    }
+
+    /// Set the user-id header for all requests.
+    ///
+    /// This identifies the user making the requests.
+    pub fn user_id(self, user_id: impl AsRef<str>) -> LettaResult<Self> {
+        self.header("user-id", user_id)
+    }
 }
 
 /// Main Letta API client.
@@ -81,6 +116,21 @@ impl LettaClient {
     pub fn local() -> LettaResult<Self> {
         ClientBuilder::new()
             .environment(LettaEnvironment::SelfHosted)
+            .build()
+    }
+
+    /// Create a new client for Letta Cloud with project context.
+    ///
+    /// This creates a client that automatically includes the X-Project header
+    /// with all requests, associating them with the specified project.
+    pub fn cloud_with_project(
+        token: impl Into<String>,
+        project_id: impl AsRef<str>,
+    ) -> LettaResult<Self> {
+        ClientBuilder::new()
+            .environment(LettaEnvironment::Cloud)
+            .auth(AuthConfig::bearer(token))
+            .project(project_id)?
             .build()
     }
 
@@ -352,6 +402,57 @@ impl LettaClient {
         .await
     }
 
+    /// Make a PUT request with custom headers.
+    #[tracing::instrument(skip(self, body, extra_headers), fields(path = %path))]
+    pub async fn put_with_headers<T, B>(
+        &self,
+        path: &str,
+        body: &B,
+        extra_headers: HeaderMap,
+    ) -> LettaResult<T>
+    where
+        T: serde::de::DeserializeOwned,
+        B: serde::Serialize + ?Sized,
+    {
+        let url = self.base_url().join(path.trim_start_matches('/'))?;
+        let body_json = serde_json::to_value(body)?;
+
+        retry_with_config(&self.retry_config, || async {
+            let mut headers = HeaderMap::new();
+            self.auth().apply_to_headers(&mut headers)?;
+            headers.insert("Content-Type", "application/json".parse().unwrap());
+
+            // Add extra headers
+            for (key, value) in extra_headers.iter() {
+                headers.insert(key.clone(), value.clone());
+            }
+
+            let response = self
+                .http()
+                .put(url.clone())
+                .headers(headers)
+                .json(&body_json)
+                .send()
+                .await?;
+
+            if !response.status().is_success() {
+                let status = response.status().as_u16();
+                let headers = response.headers().clone();
+                let body = response.text().await?;
+                return Err(LettaError::from_response_with_context(
+                    status,
+                    body,
+                    Some(&headers),
+                    Some(url.clone()),
+                    Some("PUT".to_string()),
+                ));
+            }
+
+            Ok(response.json().await?)
+        })
+        .await
+    }
+
     /// Make a DELETE request.
     #[tracing::instrument(skip(self), fields(path = %path))]
     pub async fn delete<T>(&self, path: &str) -> LettaResult<T>
@@ -462,6 +563,57 @@ impl LettaClient {
         .await
     }
 
+    /// Make a POST request with custom headers.
+    #[tracing::instrument(skip(self, body, extra_headers), fields(path = %path))]
+    pub async fn post_with_headers<T, B>(
+        &self,
+        path: &str,
+        body: &B,
+        extra_headers: HeaderMap,
+    ) -> LettaResult<T>
+    where
+        T: serde::de::DeserializeOwned,
+        B: serde::Serialize + ?Sized,
+    {
+        let url = self.base_url().join(path.trim_start_matches('/'))?;
+        let body_json = serde_json::to_value(body)?;
+
+        retry_with_config(&self.retry_config, || async {
+            let mut headers = HeaderMap::new();
+            self.auth().apply_to_headers(&mut headers)?;
+            headers.insert("Content-Type", "application/json".parse().unwrap());
+
+            // Add extra headers
+            for (key, value) in extra_headers.iter() {
+                headers.insert(key.clone(), value.clone());
+            }
+
+            let response = self
+                .http()
+                .post(url.clone())
+                .headers(headers)
+                .json(&body_json)
+                .send()
+                .await?;
+
+            if !response.status().is_success() {
+                let status = response.status().as_u16();
+                let headers = response.headers().clone();
+                let body = response.text().await?;
+                return Err(LettaError::from_response_with_context(
+                    status,
+                    body,
+                    Some(&headers),
+                    Some(url.clone()),
+                    Some("POST".to_string()),
+                ));
+            }
+
+            Ok(response.json().await?)
+        })
+        .await
+    }
+
     /// Make a POST request with multipart form data.
     #[tracing::instrument(skip(self, form), fields(path = %path))]
     pub async fn post_multipart<T>(
@@ -551,6 +703,36 @@ impl ClientBuilder {
         self
     }
 
+    /// Add a single header to include with all requests.
+    pub fn header(mut self, key: impl AsRef<str>, value: impl AsRef<str>) -> LettaResult<Self> {
+        let key = key.as_ref();
+        let value = value.as_ref();
+
+        let header_name = reqwest::header::HeaderName::from_bytes(key.as_bytes())
+            .map_err(|_| LettaError::validation(format!("Invalid header name: {}", key)))?;
+        let header_value = reqwest::header::HeaderValue::from_str(value).map_err(|_| {
+            LettaError::validation(format!("Invalid header value for {}: {}", key, value))
+        })?;
+
+        let headers = self.headers.get_or_insert_with(HeaderMap::new);
+        headers.insert(header_name, header_value);
+        Ok(self)
+    }
+
+    /// Set the X-Project header for all requests.
+    ///
+    /// This associates all operations with a specific project context.
+    pub fn project(self, project_id: impl AsRef<str>) -> LettaResult<Self> {
+        self.header("X-Project", project_id)
+    }
+
+    /// Set the user-id header for all requests.
+    ///
+    /// This identifies the user making the requests.
+    pub fn user_id(self, user_id: impl AsRef<str>) -> LettaResult<Self> {
+        self.header("user-id", user_id)
+    }
+
     /// Build the client.
     pub fn build(self) -> LettaResult<LettaClient> {
         // Check if we have an explicit base URL
@@ -577,6 +759,10 @@ impl ClientBuilder {
 
         if let Some(timeout) = self.timeout {
             config = config.timeout(timeout);
+        }
+
+        if let Some(headers) = self.headers {
+            config = config.headers(headers);
         }
 
         LettaClient::new(config)
@@ -643,5 +829,63 @@ mod tests {
             .build()
             .unwrap();
         assert_eq!(client.base_url().as_str(), "http://custom.example.com/");
+    }
+
+    #[test]
+    fn test_header_configuration() -> LettaResult<()> {
+        // Test adding headers via builder
+        let _client = ClientBuilder::new()
+            .base_url("http://localhost:8283")
+            .header("user-id", "test-user-123")?
+            .header("x-custom-header", "custom-value")?
+            .build()?;
+
+        // The headers are stored in the internal HTTP client, so we can't directly
+        // verify them in this test. But we've verified the builder pattern works.
+
+        // Test adding headers via ClientConfig
+        let mut config = ClientConfig::new("http://localhost:8283")?;
+        config = config.header("user-id", "test-user-456")?;
+        let _client = LettaClient::new(config)?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_header_helpers() -> LettaResult<()> {
+        // Test project helper
+        let _client = ClientBuilder::new()
+            .base_url("http://localhost:8283")
+            .project("my-project-123")?
+            .build()?;
+
+        // Test user_id helper
+        let _client = ClientBuilder::new()
+            .base_url("http://localhost:8283")
+            .user_id("user-456")?
+            .build()?;
+
+        // Test both helpers together
+        let _client = ClientBuilder::new()
+            .base_url("http://localhost:8283")
+            .project("project-789")?
+            .user_id("user-789")?
+            .build()?;
+
+        // Test on ClientConfig
+        let config = ClientConfig::new("http://localhost:8283")?
+            .project("config-project")?
+            .user_id("config-user")?;
+        let _client = LettaClient::new(config)?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_cloud_with_project() -> LettaResult<()> {
+        let client = LettaClient::cloud_with_project("test-token", "project-123")?;
+        assert_eq!(client.base_url().as_str(), "https://api.letta.com/");
+        // Headers are configured internally
+        Ok(())
     }
 }

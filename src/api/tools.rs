@@ -2,12 +2,13 @@
 
 use crate::client::LettaClient;
 use crate::error::LettaResult;
+use crate::pagination::PaginatedStream;
 use crate::types::tool::{
     CreateToolRequest, ListToolsParams, McpServerConfig, McpTool, RunToolFromSourceRequest,
     RunToolFromSourceResponse, TestMcpServerRequest, Tool, UpdateMcpServerRequest,
     UpdateToolRequest,
 };
-use crate::types::LettaId;
+use crate::types::{LettaId, PaginationParams};
 
 /// Tool API operations.
 #[derive(Debug)]
@@ -82,6 +83,23 @@ impl<'a> ToolApi<'a> {
         &self,
     ) -> LettaResult<std::collections::HashMap<String, McpServerConfig>> {
         self.client.get("v1/tools/mcp/servers").await
+    }
+
+    /// Get a list of all configured MCP servers with optional user context.
+    ///
+    /// # Arguments
+    ///
+    /// * `user_id` - Optional user ID (sent as user-id query parameter)
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    pub async fn list_mcp_servers_with_user(
+        &self,
+        user_id: &str,
+    ) -> LettaResult<std::collections::HashMap<String, McpServerConfig>> {
+        let url = format!("v1/tools/mcp/servers?user-id={}", user_id);
+        self.client.get(&url).await
     }
 
     /// Add a new MCP server to the Letta MCP server config.
@@ -334,6 +352,57 @@ impl<'a> ToolApi<'a> {
         self.client
             .post("/v1/tools/add-base-tools", &serde_json::json!({}))
             .await
+    }
+
+    /// Get a paginated stream of tools.
+    ///
+    /// This method returns a [`PaginatedStream`] that automatically handles pagination
+    /// and allows streaming through all tools using async iteration.
+    ///
+    /// # Arguments
+    ///
+    /// * `params` - Optional pagination parameters
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # use letta_rs::client::{ClientConfig, LettaClient};
+    /// # use letta_rs::pagination::{PaginationParams, PaginationExt};
+    /// # use futures::StreamExt;
+    /// # #[tokio::main]
+    /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = LettaClient::new(ClientConfig::new("http://localhost:8283")?)?;
+    ///
+    /// let mut stream = client.tools().paginated(None);
+    /// while let Some(tool) = stream.next().await {
+    ///     let tool = tool?;
+    ///     println!("Tool: {} - {}", tool.name, tool.description.as_deref().unwrap_or(""));
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn paginated(&self, params: Option<PaginationParams>) -> PaginatedStream<Tool> {
+        let client = self.client.clone();
+        let fetch_fn = move |params: Option<PaginationParams>| {
+            let client = client.clone();
+            async move {
+                let list_params = params.map(|p| ListToolsParams {
+                    after: p.after,
+                    before: p.before,
+                    limit: p.limit.map(|l| l as u32),
+                    name: None,
+                });
+
+                client.tools().list(list_params).await
+            }
+        };
+
+        PaginatedStream::new_with_string_cursor(params, fetch_fn, |tool: &Tool| {
+            tool.id
+                .as_ref()
+                .map(|id| id.to_string())
+                .unwrap_or_default()
+        })
     }
 }
 

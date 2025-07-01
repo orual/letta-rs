@@ -1,31 +1,31 @@
 //! Integration tests for pagination functionality.
 
 use futures::StreamExt;
-use letta_rs::pagination::PaginationExt;
-use letta_rs::types::{AgentType, CreateAgentRequest, PaginationParams};
-use letta_rs::{ClientConfig, LettaClient};
+use letta_rs::client::{ClientConfig, LettaClient};
+use letta_rs::error::LettaResult;
+use letta_rs::types::*;
+use serial_test::serial;
 
 #[tokio::test]
-async fn test_agent_pagination() {
-    // Create client for local server
-    let config = ClientConfig::new("http://localhost:8283").unwrap();
-    let client = LettaClient::new(config).unwrap();
+#[serial]
+async fn test_agent_pagination() -> LettaResult<()> {
+    let config = ClientConfig::new("http://localhost:8283")?;
+    let client = LettaClient::new(config)?;
 
-    // Create a few test agents first
-    println!("Creating test agents for pagination test...");
+    // First, create some test agents to ensure we have something to paginate
+    println!("Creating test agents for pagination...");
     let mut created_agents = Vec::new();
-
-    for i in 0..5 {
-        let create_request = CreateAgentRequest::builder()
+    for i in 1..=5 {
+        let request = CreateAgentRequest::builder()
             .name(format!("Pagination Test Agent {}", i))
             .agent_type(AgentType::MemGPT)
             .model("letta/letta-free")
             .embedding("letta/letta-free")
             .build();
 
-        let agent = client.agents().create(create_request).await.unwrap();
+        let agent = client.agents().create(request).await?;
+        println!("  Created agent: {} ({})", agent.name, agent.id);
         created_agents.push(agent.id);
-        println!("Created agent: Pagination Test Agent {}", i);
     }
 
     // Test 1: Use pagination to iterate through agents
@@ -36,16 +36,9 @@ async fn test_agent_pagination() {
 
     let mut count = 0;
     while let Some(result) = stream.next().await {
-        match result {
-            Ok(agent) => {
-                println!("  Found agent: {} ({})", agent.name, agent.id);
-                count += 1;
-            }
-            Err(e) => {
-                eprintln!("  Error during pagination: {:?}", e);
-                break;
-            }
-        }
+        let agent = result?;
+        println!("  Found agent: {} ({})", agent.name, agent.id);
+        count += 1;
     }
 
     println!("Total agents found via pagination: {}", count);
@@ -61,8 +54,7 @@ async fn test_agent_pagination() {
         .collect::<Vec<_>>()
         .await
         .into_iter()
-        .collect::<Result<Vec<_>, _>>()
-        .unwrap();
+        .collect::<Result<Vec<_>, _>>()?;
 
     println!("Found {} agents matching filter", filtered_agents.len());
     assert!(
@@ -76,8 +68,7 @@ async fn test_agent_pagination() {
         .agents()
         .paginated(Some(PaginationParams::new().limit(10)))
         .collect()
-        .await
-        .unwrap();
+        .await?;
 
     println!("Collected {} agents total", all_agents.len());
     assert!(
@@ -88,23 +79,22 @@ async fn test_agent_pagination() {
     // Cleanup: delete the test agents
     println!("\nCleaning up test agents...");
     for agent_id in created_agents {
-        match client.agents().delete(&agent_id).await {
-            Ok(_) => println!("  Deleted agent: {}", agent_id),
-            Err(e) => eprintln!("  Failed to delete agent {}: {:?}", agent_id, e),
-        }
+        client.agents().delete(&agent_id).await?;
+        println!("  Deleted agent: {}", agent_id);
     }
 
     println!("✅ Pagination tests completed!");
+    Ok(())
 }
 
 #[tokio::test]
 #[ignore = "Requires many agents to test real pagination"]
-async fn test_real_pagination_with_cursor() {
+async fn test_real_pagination_with_cursor() -> LettaResult<()> {
     // This test would require having many agents (>100) to actually test
     // cursor-based pagination across multiple pages.
 
-    let config = ClientConfig::new("http://localhost:8283").unwrap();
-    let client = LettaClient::new(config).unwrap();
+    let config = ClientConfig::new("http://localhost:8283")?;
+    let client = LettaClient::new(config)?;
 
     // Test with a small limit to force multiple pages
     let agents: Vec<_> = client
@@ -114,8 +104,7 @@ async fn test_real_pagination_with_cursor() {
         .collect::<Vec<_>>()
         .await
         .into_iter()
-        .collect::<Result<Vec<_>, _>>()
-        .unwrap();
+        .collect::<Result<Vec<_>, _>>()?;
 
     println!("Collected {} agents using cursor pagination", agents.len());
 
@@ -126,4 +115,6 @@ async fn test_real_pagination_with_cursor() {
         agents.len(),
         "All agents should be unique"
     );
+
+    Ok(())
 }

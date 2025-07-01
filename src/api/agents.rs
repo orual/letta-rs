@@ -50,6 +50,34 @@ impl<'a> AgentApi<'a> {
         self.client.post("v1/agents", &request).await
     }
 
+    /// Create a new agent with optional project context.
+    ///
+    /// # Arguments
+    ///
+    /// * `request` - The agent creation request
+    /// * `project_id` - Optional project ID to associate the agent with (sent as X-Project header)
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    pub async fn create_with_project(
+        &self,
+        request: CreateAgentRequest,
+        project_id: &str,
+    ) -> LettaResult<AgentState> {
+        let mut headers = reqwest::header::HeaderMap::new();
+        headers.insert(
+            "X-Project",
+            project_id.parse().map_err(|_| {
+                crate::error::LettaError::validation("Invalid X-Project header value")
+            })?,
+        );
+
+        self.client
+            .post_with_headers("v1/agents", &request, headers)
+            .await
+    }
+
     /// Get a specific agent by ID.
     ///
     /// # Arguments

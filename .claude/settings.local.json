@@ -37,7 +37,8 @@
       "Bash(mv:*)",
       "mcp__context7__resolve-library-id",
       "mcp__context7__get-library-docs",
-      "Bash(-w \"\\nHTTP Status: %{http_code}\\n\")"
+      "Bash(-w \"\\nHTTP Status: %{http_code}\\n\")",
+      "Bash(just pre-commit:*)"
     ],
     "deny": []
   }

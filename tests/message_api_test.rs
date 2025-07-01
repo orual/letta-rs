@@ -100,10 +100,12 @@ async fn test_local_server_message_operations() {
 
     // Cleanup: delete the test agent
     println!("Cleaning up test agent...");
-    match client.agents().delete(agent_id).await {
-        Ok(_) => println!("✅ Test agent deleted"),
-        Err(e) => println!("Warning: Failed to delete test agent: {:?}", e),
-    }
+    client
+        .agents()
+        .delete(agent_id)
+        .await
+        .expect("Failed to delete test agent");
+    println!("✅ Test agent deleted");
 }
 
 #[tokio::test]
@@ -146,10 +148,12 @@ async fn test_local_server_message_reset() {
 
     // Cleanup: delete the test agent
     println!("Cleaning up test agent...");
-    match client.agents().delete(agent_id).await {
-        Ok(_) => println!("✅ Test agent deleted"),
-        Err(e) => println!("Warning: Failed to delete test agent: {:?}", e),
-    }
+    client
+        .agents()
+        .delete(agent_id)
+        .await
+        .expect("Failed to delete test agent");
+    println!("✅ Test agent deleted");
 }
 
 #[tokio::test]
@@ -226,10 +230,12 @@ async fn test_update_user_message() {
 
     // Cleanup: delete the test agent
     println!("Cleaning up test agent...");
-    match client.agents().delete(agent_id).await {
-        Ok(_) => println!("✅ Test agent deleted"),
-        Err(e) => println!("Warning: Failed to delete test agent: {:?}", e),
-    }
+    client
+        .agents()
+        .delete(agent_id)
+        .await
+        .expect("Failed to delete test agent");
+    println!("✅ Test agent deleted");
 }
 
 #[tokio::test]
@@ -286,10 +292,12 @@ async fn test_create_async_message() {
 
     // Cleanup: delete the test agent
     println!("Cleaning up test agent...");
-    match client.agents().delete(agent_id).await {
-        Ok(_) => println!("✅ Test agent deleted"),
-        Err(e) => println!("Warning: Failed to delete test agent: {:?}", e),
-    }
+    client
+        .agents()
+        .delete(agent_id)
+        .await
+        .expect("Failed to delete test agent");
+    println!("✅ Test agent deleted");
 }
 
 #[tokio::test]
