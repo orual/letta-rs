@@ -3,5 +3,6 @@
 /result-lib
 .direnv
 **.env
-.claude/settings.local.json
+/.claude/settings.local.json
 /.pre-commit-config.yaml
+.mcp.json
