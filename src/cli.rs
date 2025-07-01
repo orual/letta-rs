@@ -1,9 +1,10 @@
 //! Command-line interface for the Letta client.
 
 use clap::Parser;
-use letta::types::agent::{AgentType, CreateAgentRequest};
+use letta::types::agent::{AgentType, CreateAgentRequest, ListAgentsParams};
 use letta::types::memory::Block;
 use letta::{auth::AuthConfig, ClientConfig, LettaClient};
+use std::io::Write;
 
 #[derive(Parser, Debug)]
 #[clap(author = "Orual", version, about = "Letta REST API client")]
@@ -142,8 +143,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         },
         Command::Health => {
             println!("Checking health...");
-            // TODO: Implement actual health check
-            println!("Health check not yet implemented");
+            check_health(&client).await?;
         }
     }
 
@@ -151,13 +151,39 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 async fn list_agents(
-    _client: &LettaClient,
+    client: &LettaClient,
     limit: u32,
     tags: Vec<String>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    println!("Listing agents (limit: {}, tags: {:?})...", limit, tags);
-    // TODO: Implement when agent API is ready
-    println!("Agent listing not yet implemented");
+    println!("Listing agents...");
+
+    let mut params = ListAgentsParams::default();
+    params.limit = Some(limit);
+    if !tags.is_empty() {
+        params.tags = Some(tags);
+    }
+
+    let agents = client.agents().list(params).await?;
+
+    if agents.is_empty() {
+        println!("No agents found.");
+    } else {
+        println!("Found {} agents:\n", agents.len());
+        for agent in agents {
+            println!("ID: {}", agent.id);
+            println!("Name: {}", agent.name);
+            println!("Type: {:?}", agent.agent_type);
+            if !agent.tags.is_empty() {
+                println!("Tags: {:?}", agent.tags);
+            }
+            if let Some(desc) = &agent.description {
+                println!("Description: {}", desc);
+            }
+            println!("Created: {}", agent.created_at);
+            println!();
+        }
+    }
+
     Ok(())
 }
 

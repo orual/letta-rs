@@ -12,7 +12,7 @@ categories = ["api-bindings", "web-programming::http-client"]
 readme = "README.md"
 documentation = "https://docs.rs/letta"
 # ...
-exclude = [".claude", "CLAUDE*", "*.md"]
+exclude = [".claude", "CLAUDE*", "*.md", ".direnv"]
 include = ["README.md"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
