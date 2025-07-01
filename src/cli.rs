@@ -4,6 +4,7 @@ use clap::Parser;
 use letta::types::agent::{AgentType, CreateAgentRequest, ListAgentsParams};
 use letta::types::common::LettaId;
 use letta::types::memory::Block;
+use letta::types::message::{CreateMessagesRequest, MessageCreate, MessageRole};
 use letta::{auth::AuthConfig, ClientConfig, LettaClient};
 use std::io::Write;
 use std::str::FromStr;
@@ -39,6 +40,9 @@ enum Command {
     /// Agent operations
     #[command(subcommand)]
     Agent(AgentCommand),
+    /// Message operations
+    #[command(subcommand)]
+    Message(MessageCommand),
     /// Health check
     Health,
 }
@@ -66,11 +70,11 @@ enum AgentCommand {
         #[arg(short = 'a', long, default_value = "memgpt")]
         agent_type: String,
         /// Model to use (shorthand for llm_config)
-        #[arg(short = 'm', long)]
-        model: Option<String>,
+        #[arg(short = 'm', long, default_value = "letta/letta-free")]
+        model: String,
         /// Embedding model to use (shorthand for embedding_config)
-        #[arg(short = 'e', long)]
-        embedding: Option<String>,
+        #[arg(short = 'e', long, default_value = "letta/letta-free")]
+        embedding: String,
         /// Tags for the agent
         #[arg(short = 't', long)]
         tags: Vec<String>,
@@ -93,6 +97,42 @@ enum AgentCommand {
         /// Skip confirmation
         #[arg(short = 'y', long)]
         yes: bool,
+    },
+}
+
+#[derive(Parser, Debug)]
+enum MessageCommand {
+    /// Send a message to an agent
+    Send {
+        /// Agent ID to send message to
+        #[arg(short = 'a', long)]
+        agent_id: String,
+        /// Message text to send
+        message: String,
+        /// Message role (user, system, assistant)
+        #[arg(short = 'r', long, default_value = "user")]
+        role: String,
+        /// Maximum steps for processing
+        #[arg(short = 's', long)]
+        max_steps: Option<i32>,
+        /// Disable streaming (by default, messages are streamed)
+        #[arg(long)]
+        no_stream: bool,
+        /// Output format (json, pretty, summary)
+        #[arg(short = 'o', long, default_value = "summary")]
+        output: String,
+    },
+    /// List messages for an agent
+    List {
+        /// Agent ID
+        #[arg(short = 'a', long)]
+        agent_id: String,
+        /// Maximum number of messages to return
+        #[arg(short = 'l', long, default_value = "20")]
+        limit: i32,
+        /// Output format (json, pretty, summary)
+        #[arg(short = 'o', long, default_value = "summary")]
+        output: String,
     },
 }
 
@@ -141,6 +181,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             AgentCommand::Delete { id, yes } => {
                 delete_agent(&client, &id, yes).await?;
+            }
+        },
+        Command::Message(msg_cmd) => match msg_cmd {
+            MessageCommand::Send {
+                agent_id,
+                message,
+                role,
+                max_steps,
+                no_stream,
+                output,
+            } => {
+                send_message(
+                    &client, &agent_id, &message, &role, max_steps, !no_stream, &output,
+                )
+                .await?;
+            }
+            MessageCommand::List {
+                agent_id,
+                limit,
+                output,
+            } => {
+                list_messages(&client, &agent_id, limit, &output).await?;
             }
         },
         Command::Health => {
@@ -194,8 +256,8 @@ async fn create_agent(
     name: String,
     system: Option<String>,
     agent_type: String,
-    model: Option<String>,
-    embedding: Option<String>,
+    model: String,
+    embedding: String,
     tags: Vec<String>,
     output: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -235,15 +297,11 @@ async fn create_agent(
 
     let mut request = request.build();
 
-    // Add model if specified (shorthand field)
-    if let Some(model) = model {
-        request.model = Some(model);
-    }
+    // Add model (shorthand field)
+    request.model = Some(model);
 
-    // Add embedding if specified (shorthand field)
-    if let Some(embedding) = embedding {
-        request.embedding = Some(embedding);
-    }
+    // Add embedding (shorthand field)
+    request.embedding = Some(embedding);
 
     // Show what we're doing if not in JSON mode
     if output != "json" {
@@ -262,7 +320,7 @@ async fn create_agent(
                 println!("{}", json);
             }
             _ => {
-                println!("✅ Agent created successfully!");
+                println!("Agent created successfully!");
                 println!("\nAgent Details:");
                 println!("  ID: {}", agent.id);
                 println!("  Name: {}", agent.name);
@@ -282,7 +340,7 @@ async fn create_agent(
             }
         },
         Err(e) => {
-            eprintln!("❌ Error creating agent: {}", e);
+            eprintln!("Error creating agent: {}", e);
             std::process::exit(1);
         }
     }
@@ -345,7 +403,7 @@ async fn get_agent(
             }
         },
         Err(e) => {
-            eprintln!("❌ Error getting agent: {}", e);
+            eprintln!("Error getting agent: {}", e);
             std::process::exit(1);
         }
     }
@@ -372,10 +430,10 @@ async fn delete_agent(
     let agent_id = LettaId::from_str(id)?;
     match client.agents().delete(&agent_id).await {
         Ok(_) => {
-            println!("✅ Agent deleted successfully.");
+            println!("Agent deleted successfully.");
         }
         Err(e) => {
-            eprintln!("❌ Error deleting agent: {}", e);
+            eprintln!("Error deleting agent: {}", e);
             std::process::exit(1);
         }
     }
@@ -385,16 +443,270 @@ async fn delete_agent(
 async fn check_health(client: &LettaClient) -> Result<(), Box<dyn std::error::Error>> {
     match client.health().check().await {
         Ok(health) => {
-            println!("✅ Server is healthy!");
+            println!("Server is healthy!");
             println!("\nServer Details:");
             println!("  Status: {}", health.status);
             println!("  Version: {}", health.version);
         }
         Err(e) => {
-            eprintln!("❌ Error checking health: {}", e);
+            eprintln!("Error checking health: {}", e);
             eprintln!("\nThe server may be down or unreachable.");
             std::process::exit(1);
         }
     }
+    Ok(())
+}
+
+async fn send_message(
+    client: &LettaClient,
+    agent_id: &str,
+    message: &str,
+    role: &str,
+    max_steps: Option<i32>,
+    stream: bool,
+    output: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    // Parse message role
+    let role = match role.to_lowercase().as_str() {
+        "user" => MessageRole::User,
+        "system" => MessageRole::System,
+        "assistant" => MessageRole::Assistant,
+        _ => {
+            eprintln!("Invalid role: {}. Using 'user'.", role);
+            MessageRole::User
+        }
+    };
+
+    // Create the message
+    let message = MessageCreate {
+        role,
+        content: message.into(),
+        ..Default::default()
+    };
+
+    // Create the request
+    let mut request = CreateMessagesRequest {
+        messages: vec![message],
+        ..Default::default()
+    };
+
+    if let Some(steps) = max_steps {
+        request.max_steps = Some(steps);
+    }
+
+    let agent_id = LettaId::from_str(agent_id)?;
+
+    if stream {
+        // Handle streaming response
+        use futures::StreamExt;
+
+        if output != "json" {
+            println!("Streaming response from agent...\n");
+        }
+
+        // Use token streaming for better UX when not in JSON mode
+        let stream_tokens = output != "json";
+        let mut stream = client
+            .messages()
+            .create_stream(&agent_id, request, stream_tokens)
+            .await?;
+
+        while let Some(event) = stream.next().await {
+            match event {
+                Ok(letta::StreamingEvent::Message(msg)) => {
+                    match output {
+                        "json" => {
+                            println!("{}", serde_json::to_string(&msg)?);
+                        }
+                        _ => {
+                            // Pretty print the message based on type
+                            use letta::types::message::LettaMessageUnion;
+                            match msg {
+                                LettaMessageUnion::UserMessage(m) => {
+                                    println!("User: {}", m.content);
+                                }
+                                LettaMessageUnion::AssistantMessage(m) => {
+                                    println!("Assistant: {}", m.content);
+                                }
+                                LettaMessageUnion::SystemMessage(m) => {
+                                    println!("System: {}", m.content);
+                                }
+                                LettaMessageUnion::ToolCallMessage(m) => {
+                                    println!(
+                                        "Tool Call: {} - {}",
+                                        m.tool_call.name, m.tool_call.arguments
+                                    );
+                                }
+                                LettaMessageUnion::ToolReturnMessage(m) => {
+                                    println!("Tool Result: {}", m.tool_return);
+                                }
+                                _ => {
+                                    // For other message types, show the JSON
+                                    println!("{}", serde_json::to_string_pretty(&msg)?);
+                                }
+                            }
+                        }
+                    }
+                }
+                Ok(letta::StreamingEvent::StopReason(reason)) => {
+                    if output == "json" {
+                        println!("{}", serde_json::to_string(&reason)?);
+                    }
+                }
+                Ok(letta::StreamingEvent::Usage(usage)) => {
+                    if output == "json" {
+                        println!("{}", serde_json::to_string(&usage)?);
+                    } else if output != "summary" {
+                        println!("\nUsage Statistics:");
+                        if let Some(steps) = usage.step_count {
+                            println!("  Steps: {}", steps);
+                        }
+                        if let Some(tokens) = usage.total_tokens {
+                            println!("  Total Tokens: {}", tokens);
+                        }
+                    }
+                }
+                Err(e) => {
+                    eprintln!("Streaming error: {}", e);
+                    std::process::exit(1);
+                }
+            }
+        }
+    } else {
+        // Handle non-streaming response
+        if output != "json" {
+            println!("Sending message to agent...");
+        }
+
+        match client.messages().create(&agent_id, request).await {
+            Ok(response) => match output {
+                "json" => {
+                    println!("{}", serde_json::to_string(&response)?);
+                }
+                "pretty" => {
+                    println!("{}", serde_json::to_string_pretty(&response)?);
+                }
+                _ => {
+                    println!("Message sent successfully!\n");
+
+                    // Display the conversation
+                    for msg in &response.messages {
+                        use letta::types::message::LettaMessageUnion;
+                        match msg {
+                            LettaMessageUnion::UserMessage(m) => {
+                                println!("👤 User: {}", m.content);
+                            }
+                            LettaMessageUnion::AssistantMessage(m) => {
+                                println!("🤖 Assistant: {}", m.content);
+                            }
+                            LettaMessageUnion::SystemMessage(m) => {
+                                println!("💻 System: {}", m.content);
+                            }
+                            LettaMessageUnion::ToolCallMessage(m) => {
+                                println!(
+                                    "🔧 Tool Call: {} - {}",
+                                    m.tool_call.name, m.tool_call.arguments
+                                );
+                            }
+                            LettaMessageUnion::ToolReturnMessage(m) => {
+                                println!("📊 Tool Result: {}", m.tool_return);
+                            }
+                            _ => {}
+                        }
+                    }
+
+                    // Show stop reason
+                    println!("\nStop Reason: {:?}", response.stop_reason.stop_reason);
+
+                    // Show usage if available
+                    println!("\nUsage:");
+                    if let Some(steps) = response.usage.step_count {
+                        println!("  Steps: {}", steps);
+                    }
+                    if let Some(tokens) = response.usage.total_tokens {
+                        println!("  Total Tokens: {}", tokens);
+                    }
+                }
+            },
+            Err(e) => {
+                eprintln!("Error sending message: {}", e);
+                std::process::exit(1);
+            }
+        }
+    }
+
+    Ok(())
+}
+
+async fn list_messages(
+    client: &LettaClient,
+    agent_id: &str,
+    limit: i32,
+    output: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let agent_id = LettaId::from_str(agent_id)?;
+
+    let params = letta::types::message::ListMessagesRequest {
+        limit: Some(limit),
+        ..Default::default()
+    };
+
+    match client.messages().list(&agent_id, Some(params)).await {
+        Ok(messages) => match output {
+            "json" => {
+                println!("{}", serde_json::to_string(&messages)?);
+            }
+            "pretty" => {
+                println!("{}", serde_json::to_string_pretty(&messages)?);
+            }
+            _ => {
+                if messages.is_empty() {
+                    println!("No messages found.");
+                } else {
+                    println!("Found {} messages:\n", messages.len());
+
+                    for msg in messages {
+                        use letta::types::message::LettaMessageUnion;
+                        match msg {
+                            LettaMessageUnion::UserMessage(m) => {
+                                println!("User [{}]", m.date);
+                                println!("   {}\n", m.content);
+                            }
+                            LettaMessageUnion::AssistantMessage(m) => {
+                                println!("Assistant [{}]", m.date);
+                                println!("   {}\n", m.content);
+                            }
+                            LettaMessageUnion::SystemMessage(m) => {
+                                println!("System [{}]", m.date);
+                                println!("   {}\n", m.content);
+                            }
+                            LettaMessageUnion::ToolCallMessage(m) => {
+                                println!("Tool Call [{}]", m.date);
+                                println!("   Tool: {}", m.tool_call.name);
+                                println!("   Args: {}\n", m.tool_call.arguments);
+                            }
+                            LettaMessageUnion::ToolReturnMessage(m) => {
+                                println!("Tool Result [{}]", m.date);
+                                println!("   {}\n", m.tool_return);
+                            }
+                            LettaMessageUnion::ReasoningMessage(m) => {
+                                println!("Reasoning [{}]", m.date);
+                                println!("   {}\n", m.reasoning);
+                            }
+                            LettaMessageUnion::HiddenReasoningMessage(m) => {
+                                println!("Hidden Reasoning [{}]", m.date);
+                                println!("   State: {:?}\n", m.state);
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        Err(e) => {
+            eprintln!("Error listing messages: {}", e);
+            std::process::exit(1);
+        }
+    }
+
     Ok(())
 }
