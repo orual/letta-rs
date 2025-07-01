@@ -2,6 +2,7 @@
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use smart_default::SmartDefault;
 use std::collections::HashMap;
 use std::fmt;
 use std::str::FromStr;
@@ -342,19 +343,14 @@ impl Metadata {
 }
 
 /// Sort order for list operations.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, SmartDefault)]
 #[serde(rename_all = "lowercase")]
 pub enum SortOrder {
     /// Ascending order.
     Asc,
     /// Descending order.
+    #[default]
     Desc,
-}
-
-impl Default for SortOrder {
-    fn default() -> Self {
-        Self::Desc
-    }
 }
 
 /// Common query parameters for list operations.

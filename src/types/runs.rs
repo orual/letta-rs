@@ -4,12 +4,14 @@ use std::fmt;
 
 use crate::types::common::{LettaId, Timestamp};
 use serde::{Deserialize, Serialize};
+use smart_default::SmartDefault;
 
 /// Status of a job/run.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, SmartDefault)]
 #[serde(rename_all = "lowercase")]
 pub enum JobStatus {
     /// Job was created.
+    #[default]
     Created,
     /// Job is running.
     Running,

@@ -3,6 +3,7 @@
 use crate::types::common::{LettaId, Metadata, Timestamp};
 use crate::types::memory::Block;
 use serde::{Deserialize, Serialize};
+use smart_default::SmartDefault;
 use std::collections::HashMap;
 
 /// Environment variable for agent tool execution.
@@ -35,9 +36,10 @@ pub struct AgentEnvironmentVariable {
 }
 
 /// Agent type enum.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, SmartDefault)]
 pub enum AgentType {
     /// Standard memgpt-style agent.
+    #[default]
     #[serde(rename = "memgpt_agent")]
     MemGPT,
     /// Version 2 memgpt agent.
@@ -64,12 +66,6 @@ pub enum AgentType {
     /// Other agent types.
     #[serde(other)]
     Other,
-}
-
-impl Default for AgentType {
-    fn default() -> Self {
-        Self::MemGPT
-    }
 }
 
 /// LLM configuration for an agent.
@@ -353,10 +349,11 @@ pub enum ToolRule {
 }
 
 /// Response format type.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, SmartDefault)]
 #[serde(rename_all = "snake_case")]
 pub enum ResponseFormatType {
     /// Text response.
+    #[default]
     Text,
     /// JSON object response.
     JsonObject,

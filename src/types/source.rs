@@ -3,12 +3,14 @@
 use crate::types::agent::EmbeddingConfig;
 use crate::types::common::{LettaId, Metadata, Timestamp};
 use serde::{Deserialize, Serialize};
+use smart_default::SmartDefault;
 
 /// File processing status.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, SmartDefault)]
 #[serde(rename_all = "snake_case")]
 pub enum FileProcessingStatus {
     /// File is pending processing.
+    #[default]
     Pending,
     /// File is being parsed.
     Parsing,
