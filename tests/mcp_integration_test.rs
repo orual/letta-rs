@@ -1,6 +1,6 @@
 //! Integration tests for MCP (Model Context Protocol) server endpoints.
 
-use letta_rs::{
+use letta::{
     client::LettaClient, McpServerConfig, McpServerType, SseServerConfig, StdioServerConfig,
     StreamableHttpServerConfig, TestMcpServerRequest, UpdateMcpServerRequest, UpdateSseMcpServer,
 };

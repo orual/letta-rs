@@ -133,8 +133,8 @@ impl<'a> ProvidersApi<'a> {
     /// # Example
     ///
     /// ```no_run
-    /// # use letta_rs::client::{ClientConfig, LettaClient};
-    /// # use letta_rs::{types::PaginationParams, pagination::PaginationExt};
+    /// # use letta::client::{ClientConfig, LettaClient};
+    /// # use letta::{types::PaginationParams, pagination::PaginationExt};
     /// # use futures::StreamExt;
     /// # #[tokio::main]
     /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {

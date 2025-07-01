@@ -1,14 +1,14 @@
 //! Integration tests for message streaming with SSE.
 
 use futures::StreamExt;
-use letta_rs::client::ClientBuilder;
-use letta_rs::error::LettaResult;
-use letta_rs::types::agent::{AgentState, AgentType, CreateAgentRequest};
-use letta_rs::types::memory::Block;
-use letta_rs::types::message::{
+use letta::client::ClientBuilder;
+use letta::error::LettaResult;
+use letta::types::agent::{AgentState, AgentType, CreateAgentRequest};
+use letta::types::memory::Block;
+use letta::types::message::{
     CreateMessagesRequest, MessageCreate, MessageCreateContent, MessageRole,
 };
-use letta_rs::{LettaClient, LettaId, StreamingEvent};
+use letta::{LettaClient, LettaId, StreamingEvent};
 use serial_test::serial;
 use std::str::FromStr;
 use std::time::Duration;
@@ -108,7 +108,7 @@ async fn test_message_streaming_basic() -> LettaResult<()> {
                 }
             }
         }
-        Ok::<(), letta_rs::LettaError>(())
+        Ok::<(), letta::LettaError>(())
     })
     .await;
 
@@ -186,7 +186,7 @@ async fn test_message_streaming_with_tokens() -> LettaResult<()> {
                 }
             }
         }
-        Ok::<(), letta_rs::LettaError>(())
+        Ok::<(), letta::LettaError>(())
     })
     .await;
 
@@ -241,7 +241,7 @@ async fn test_message_streaming_error_handling() -> LettaResult<()> {
 #[tokio::test]
 #[serial]
 async fn test_message_streaming_multimodal() -> LettaResult<()> {
-    use letta_rs::types::message::{ContentPart, ImageContent, ImageUrl, TextContent};
+    use letta::types::message::{ContentPart, ImageContent, ImageUrl, TextContent};
 
     let client = create_test_client()?;
 
@@ -304,7 +304,7 @@ async fn test_message_streaming_multimodal() -> LettaResult<()> {
                         }
                     }
                 }
-                Ok::<(), letta_rs::LettaError>(())
+                Ok::<(), letta::LettaError>(())
             })
             .await;
 

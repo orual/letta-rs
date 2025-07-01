@@ -1140,7 +1140,7 @@ pub trait ErrorContext<T> {
     ///
     /// # Example
     /// ```no_run
-    /// # use letta_rs::error::{LettaResult, ErrorContext};
+    /// # use letta::error::{LettaResult, ErrorContext};
     /// # async fn example() -> LettaResult<()> {
     /// # let path = "test.txt";
     /// # let result: LettaResult<()> = Ok(());
@@ -1154,7 +1154,7 @@ pub trait ErrorContext<T> {
     ///
     /// # Example
     /// ```no_run
-    /// # use letta_rs::error::{LettaResult, ErrorContext};
+    /// # use letta::error::{LettaResult, ErrorContext};
     /// # async fn example() -> LettaResult<()> {
     /// # let result: LettaResult<()> = Ok(());
     /// result.context_resource("agent", "agent-123")?;
@@ -1167,7 +1167,7 @@ pub trait ErrorContext<T> {
     ///
     /// # Example
     /// ```no_run
-    /// # use letta_rs::error::{LettaResult, ErrorContext};
+    /// # use letta::error::{LettaResult, ErrorContext};
     /// # async fn example() -> LettaResult<()> {
     /// # let result: LettaResult<()> = Ok(());
     /// result.context_operation("uploading file")?;
@@ -1180,7 +1180,7 @@ pub trait ErrorContext<T> {
     ///
     /// # Example
     /// ```no_run
-    /// # use letta_rs::error::{LettaResult, ErrorContext};
+    /// # use letta::error::{LettaResult, ErrorContext};
     /// # async fn example() -> LettaResult<()> {
     /// # let result: LettaResult<()> = Ok(());
     /// result.context_msg("while processing batch request")?;

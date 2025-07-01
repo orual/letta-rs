@@ -13,7 +13,7 @@ use uuid::Uuid;
 /// # Examples
 ///
 /// ```
-/// use letta_rs::types::LettaId;
+/// use letta::types::LettaId;
 /// use std::str::FromStr;
 ///
 /// // Bare UUID

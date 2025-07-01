@@ -46,7 +46,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is the development guide for contributing to letta-rs, a Rust client library for the Letta REST API. This document contains internal implementation details, coding standards, and development workflows. For user documentation, see README.md.
+This is the development guide for contributing to letta, a Rust client library for the Letta REST API. This document contains internal implementation details, coding standards, and development workflows. For user documentation, see README.md.
 
 ### Implementation Status
 

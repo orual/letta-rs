@@ -1,6 +1,6 @@
 //! Test agent deserialization step by step.
 
-use letta_rs::types::AgentState;
+use letta::types::AgentState;
 
 #[tokio::test]
 async fn test_agent_deserialization() {

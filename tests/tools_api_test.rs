@@ -1,13 +1,11 @@
 //! Integration tests for tools API endpoints.
 
-use letta_rs::client::ClientBuilder;
-use letta_rs::error::LettaResult;
-use letta_rs::types::agent::CreateAgentRequest;
-use letta_rs::types::memory::Block;
-use letta_rs::types::tool::{
-    CreateToolRequest, ListToolsParams, SourceType, Tool, UpdateToolRequest,
-};
-use letta_rs::{LettaClient, LettaId};
+use letta::client::ClientBuilder;
+use letta::error::LettaResult;
+use letta::types::agent::CreateAgentRequest;
+use letta::types::memory::Block;
+use letta::types::tool::{CreateToolRequest, ListToolsParams, SourceType, Tool, UpdateToolRequest};
+use letta::{LettaClient, LettaId};
 use serial_test::serial;
 
 /// Create a test client for the local server.
@@ -358,7 +356,7 @@ async fn test_run_tool_from_source() -> LettaResult<()> {
     let client = create_test_client()?;
 
     // Create a simple add function
-    let request = letta_rs::RunToolFromSourceRequest {
+    let request = letta::RunToolFromSourceRequest {
         source_code: r#"
 def add_numbers(a: float, b: float) -> float:
     """Add two numbers together.
@@ -415,7 +413,7 @@ def add_numbers(a: float, b: float) -> float:
     // Run the tool from source
     let result = client.tools().run_from_source(request).await?;
 
-    assert_eq!(result.status, letta_rs::ToolExecutionStatus::Success);
+    assert_eq!(result.status, letta::ToolExecutionStatus::Success);
     assert_eq!(result.tool_return, "8.0");
 
     Ok(())

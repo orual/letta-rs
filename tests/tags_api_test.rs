@@ -1,8 +1,8 @@
 //! Integration tests for the Tags API.
 
-use letta_rs::client::{ClientConfig, LettaClient};
-use letta_rs::error::LettaResult;
-use letta_rs::types::*;
+use letta::client::{ClientConfig, LettaClient};
+use letta::error::LettaResult;
+use letta::types::*;
 
 /// Get a test client for the local server.
 fn get_test_client() -> LettaResult<LettaClient> {
@@ -66,7 +66,7 @@ async fn test_list_tags_with_query() -> LettaResult<()> {
 #[tokio::test]
 async fn test_tags_pagination_stream() -> LettaResult<()> {
     use futures::StreamExt;
-    use letta_rs::types::PaginationParams;
+    use letta::types::PaginationParams;
 
     let client = get_test_client()?;
 

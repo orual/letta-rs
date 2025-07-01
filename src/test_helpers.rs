@@ -17,7 +17,7 @@ pub mod agents {
     ///
     /// # Example
     /// ```no_run
-    /// use letta_rs::test_helpers::agents::test_agent;
+    /// use letta::test_helpers::agents::test_agent;
     ///
     /// let request = test_agent("TestBot");
     /// // Creates an agent with name "TestBot" and sensible test defaults

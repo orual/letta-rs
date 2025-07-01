@@ -1,7 +1,7 @@
 //! Test that error handling properly causes test failures.
 
-use letta_rs::client::{ClientConfig, LettaClient};
-use letta_rs::types::*;
+use letta::client::{ClientConfig, LettaClient};
+use letta::types::*;
 
 #[tokio::test]
 #[should_panic(expected = "Failed to create agent")]

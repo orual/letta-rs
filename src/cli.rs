@@ -1,9 +1,9 @@
 //! Command-line interface for the Letta client.
 
 use clap::Parser;
-use letta_rs::types::agent::{AgentType, CreateAgentRequest};
-use letta_rs::types::memory::MemoryBlock;
-use letta_rs::{auth::AuthConfig, ClientConfig, LettaClient};
+use letta::types::agent::{AgentType, CreateAgentRequest};
+use letta::types::memory::MemoryBlock;
+use letta::{auth::AuthConfig, ClientConfig, LettaClient};
 
 #[derive(Parser, Debug)]
 #[clap(author = "Orual", version, about = "Letta REST API client")]

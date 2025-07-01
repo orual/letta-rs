@@ -1,7 +1,7 @@
 //! Integration tests for Composio endpoints.
 
-use letta_rs::error::LettaResult;
-use letta_rs::LettaClient;
+use letta::error::LettaResult;
+use letta::LettaClient;
 use serial_test::serial;
 
 fn setup_test_client() -> LettaResult<LettaClient> {

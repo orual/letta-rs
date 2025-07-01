@@ -258,8 +258,8 @@ impl<'a> AgentApi<'a> {
     /// # Examples
     ///
     /// ```no_run
-    /// # use letta_rs::{LettaClient, ClientConfig};
-    /// # use letta_rs::types::PaginationParams;
+    /// # use letta::{LettaClient, ClientConfig};
+    /// # use letta::types::PaginationParams;
     /// # use futures::StreamExt;
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// # let client = LettaClient::new(ClientConfig::new("http://localhost:8283")?)?;

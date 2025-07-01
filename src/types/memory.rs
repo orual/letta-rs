@@ -144,7 +144,7 @@ impl Block {
     ///
     /// # Example
     /// ```
-    /// # use letta_rs::types::memory::Block;
+    /// # use letta::types::memory::Block;
     /// let block = Block::human("The human's name is Alice");
     /// assert_eq!(block.label, "human");
     /// assert_eq!(block.value, "The human's name is Alice");
@@ -173,7 +173,7 @@ impl Block {
     ///
     /// # Example
     /// ```
-    /// # use letta_rs::types::memory::Block;
+    /// # use letta::types::memory::Block;
     /// let block = Block::persona("I am a helpful assistant");
     /// assert_eq!(block.label, "persona");
     /// assert_eq!(block.value, "I am a helpful assistant");
@@ -202,7 +202,7 @@ impl Block {
     ///
     /// # Example
     /// ```
-    /// # use letta_rs::types::memory::Block;
+    /// # use letta::types::memory::Block;
     /// let block = Block::new("system", "System information goes here")
     ///     .with_limit(1000)
     ///     .with_description("System-level information");

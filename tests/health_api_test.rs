@@ -1,8 +1,8 @@
 //! Integration tests for health API endpoint.
 
-use letta_rs::client::ClientBuilder;
-use letta_rs::error::LettaResult;
-use letta_rs::LettaClient;
+use letta::client::ClientBuilder;
+use letta::error::LettaResult;
+use letta::LettaClient;
 
 /// Create a test client for the local server.
 fn create_test_client() -> LettaResult<LettaClient> {

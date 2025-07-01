@@ -1,7 +1,7 @@
 //! Test Azure message creation specifically.
 
-use letta_rs::types::{AgentType, CreateAgentRequest};
-use letta_rs::{ClientConfig, LettaClient};
+use letta::types::{AgentType, CreateAgentRequest};
+use letta::{ClientConfig, LettaClient};
 
 #[tokio::test]
 async fn test_azure_message_creation() {
@@ -30,12 +30,10 @@ async fn test_azure_message_creation() {
     println!("Created agent: {} ({})", agent.name, agent_id);
 
     println!("Testing message creation with Azure agent...");
-    let message_request = letta_rs::types::CreateMessagesRequest {
-        messages: vec![letta_rs::types::MessageCreate {
-            role: letta_rs::types::MessageRole::User,
-            content: letta_rs::types::MessageCreateContent::String(
-                "Hello from Rust SDK!".to_string(),
-            ),
+    let message_request = letta::types::CreateMessagesRequest {
+        messages: vec![letta::types::MessageCreate {
+            role: letta::types::MessageRole::User,
+            content: letta::types::MessageCreateContent::String("Hello from Rust SDK!".to_string()),
             name: None,
             otid: None,
             sender_id: None,
@@ -51,7 +49,7 @@ async fn test_azure_message_creation() {
             println!("✅ Success!");
             println!("Messages: {}", response.messages.len());
             for (i, msg) in response.messages.iter().enumerate() {
-                use letta_rs::types::LettaMessageUnion;
+                use letta::types::LettaMessageUnion;
                 let type_str = match msg {
                     LettaMessageUnion::SystemMessage(_) => "System",
                     LettaMessageUnion::UserMessage(_) => "User",

@@ -1,8 +1,8 @@
 //! Integration tests for the Batch API.
 
-use letta_rs::client::{ClientConfig, LettaClient};
-use letta_rs::error::LettaResult;
-use letta_rs::types::*;
+use letta::client::{ClientConfig, LettaClient};
+use letta::error::LettaResult;
+use letta::types::*;
 use std::str::FromStr;
 
 /// Get a test client for the local server.
@@ -117,7 +117,7 @@ async fn test_cancel_batch() -> LettaResult<()> {
 
     // Expect this to fail with 404
     match result {
-        Err(letta_rs::error::LettaError::NotFound { resource_type, .. }) => {
+        Err(letta::error::LettaError::NotFound { resource_type, .. }) => {
             println!("Expected NotFound error for non-existent batch");
             println!("Resource type: {}", resource_type);
             // The server returns "Run" for this endpoint
@@ -130,7 +130,7 @@ async fn test_cancel_batch() -> LettaResult<()> {
             );
             Ok(())
         }
-        Err(letta_rs::error::LettaError::Api { status: 404, .. }) => {
+        Err(letta::error::LettaError::Api { status: 404, .. }) => {
             println!("Got 404 API error for non-existent batch");
             Ok(())
         }

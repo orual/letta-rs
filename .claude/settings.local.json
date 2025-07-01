@@ -39,10 +39,16 @@
       "mcp__context7__get-library-docs",
       "Bash(-w \"\\nHTTP Status: %{http_code}\\n\")",
       "Bash(just pre-commit:*)",
-      "WebFetch(domain:raw.githubusercontent.com)"
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "mcp__language-server__diagnostics",
+      "mcp__language-server__hover",
+      "mcp__language-server__definition",
+      "mcp__language-server__rename_symbol"
     ],
     "deny": []
   },
-  "enabledMcpjsonServers": ["language-server"],
-  "enableAllProjectMcpServers": true
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "language-server"
+  ]
 }
