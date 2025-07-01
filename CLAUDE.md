@@ -286,6 +286,86 @@ The CLI (`letta` binary) is now fully functional with complete API integration. 
    - Mock mode for offline development
    - OpenAPI spec generation from CLI
 
+## Tools CLI Implementation Plan
+
+### Overview
+The tools subcommand will allow users to manage custom tools (functions) that agents can use. The initial implementation will support:
+1. Creating tools from Python files with separate JSON schema files
+2. Listing available tools
+3. Getting tool details
+4. Deleting tools
+
+### Implementation Plan
+
+#### Phase 1: Basic Tool Management (Current)
+1. **Create Tool from Python File**:
+   - Accept Python file path containing the tool implementation
+   - Accept JSON file path for function schema (name, description, parameters)
+   - Read both files and create the tool via API
+   - Example: `letta tools create --python tool.py --schema tool_schema.json`
+
+2. **List Tools**:
+   - Show all available tools with pagination support
+   - Display tool names, descriptions, and IDs
+   - Example: `letta tools list --limit 20`
+
+3. **Get Tool Details**:
+   - Show full tool information including source code
+   - Example: `letta tools get <tool-id>`
+
+4. **Delete Tool**:
+   - Remove a tool with confirmation
+   - Example: `letta tools delete <tool-id> --yes`
+
+#### Phase 2: Future Enhancements (Not in current scope)
+- Parse Python files to auto-generate JSON schemas
+- Support for updating existing tools
+- Tool validation and testing
+- Export/import tool collections
+- Tag-based filtering
+
+### File Format Requirements
+
+#### Python Tool File
+Standard Python function with docstring:
+```python
+def my_tool(arg1: str, arg2: int = 0) -> str:
+    """Tool description here.
+    
+    Args:
+        arg1: Description of arg1
+        arg2: Description of arg2
+        
+    Returns:
+        Description of return value
+    """
+    # Implementation
+    return f"Result: {arg1} {arg2}"
+```
+
+#### Tool Schema JSON File
+```json
+{
+  "name": "my_tool",
+  "description": "Tool description here",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "arg1": {
+        "type": "string",
+        "description": "Description of arg1"
+      },
+      "arg2": {
+        "type": "integer",
+        "description": "Description of arg2",
+        "default": 0
+      }
+    },
+    "required": ["arg1"]
+  }
+}
+```
+
 ## Recent Implementation Notes
 
 ### Ergonomic Improvements (Completed)
