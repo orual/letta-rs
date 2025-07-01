@@ -72,5 +72,5 @@ cli = ["dep:clap", "dep:env_logger", "miette/fancy"]
 
 [[bin]]
 name = "letta"
-path = "src/cli.rs"
+path = "src/bin/letta.rs"
 required-features = ["cli"]

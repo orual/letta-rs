@@ -275,6 +275,10 @@ pub mod utils;
 #[cfg(test)]
 pub mod test_helpers;
 
+#[cfg(feature = "cli")]
+#[cfg_attr(docsrs, doc(cfg(feature = "cli")))]
+pub mod cli;
+
 // Re-export main types for convenience
 pub use client::{ClientBuilder, ClientConfig, LettaClient};
 pub use environment::LettaEnvironment;

@@ -240,16 +240,52 @@ cargo test --doc         # Doc tests
 3. ~~**Finish CLI implementation**~~ - ✅ Completed - CLI now makes actual API calls
 4. **Implement upsert-from-function** - Port Python SDK's function-based agent creation feature
 
+## Sources CLI Implementation Plan
+
+### Overview
+The sources subcommand will allow users to manage document sources and files for agent knowledge. The implementation will support:
+1. Creating and managing sources
+2. Uploading files to sources
+3. Listing and viewing files
+4. Managing passages (document chunks)
+5. Attaching/detaching sources to/from agents
+
+### Implementation Plan
+
+#### Phase 1: Basic Source Management
+1. **List Sources**: Show all available sources
+2. **Create Source**: Create a new source with name and embedding config
+3. **Get Source**: Show source details
+4. **Delete Source**: Remove a source
+
+#### Phase 2: File Management
+1. **Upload File**: Upload a file to a source
+2. **List Files**: Show files in a source with status
+3. **Get File**: Show file details and optionally content
+4. **Delete File**: Remove a file from a source
+
+#### Phase 3: Passage Management
+1. **List Passages**: Show document chunks from a source
+2. **Search Passages**: Find relevant passages by query
+
+#### Phase 4: Agent Source Management
+1. **List Agent Sources**: Show sources attached to an agent
+2. **Attach Source**: Attach a source to an agent
+3. **Detach Source**: Remove a source from an agent
+
 ## CLI Implementation Status
 
 The CLI (`letta` binary) is now fully functional with complete API integration. It supports:
 
 ### Current Features
 - **Agent Management**: list, create, get, delete operations
+- **Message Management**: send messages with streaming support
+- **Memory Management**: view/edit core memory, search/add archival memory
+- **Tool Management**: create, list, get, delete custom tools with validation
 - **Health Check**: Server status verification
 - **Authentication**: API key via CLI arg or environment variable
 - **Output Formats**: JSON, pretty-printed JSON, and human-readable summaries
-- **Error Handling**: Proper exit codes and user-friendly error messages
+- **Error Handling**: Rich miette diagnostics with context and suggestions
 
 ### Future CLI Improvements
 
@@ -286,18 +322,17 @@ The CLI (`letta` binary) is now fully functional with complete API integration. 
    - Mock mode for offline development
    - OpenAPI spec generation from CLI
 
-## Tools CLI Implementation Plan
+## Tools CLI Implementation (Completed)
 
 ### Overview
-The tools subcommand will allow users to manage custom tools (functions) that agents can use. The initial implementation will support:
+The tools subcommand allows users to manage custom tools (functions) that agents can use. The implementation supports:
 1. Creating tools from Python files with separate JSON schema files
-2. Listing available tools
-3. Getting tool details
-4. Deleting tools
+2. Listing available tools with pagination
+3. Getting tool details including source code and schemas
+4. Deleting tools with confirmation
+5. Comprehensive validation of JSON schemas and Python docstrings
 
-### Implementation Plan
-
-#### Phase 1: Basic Tool Management (Current)
+### Implemented Features
 1. **Create Tool from Python File**:
    - Accept Python file path containing the tool implementation
    - Accept JSON file path for function schema (name, description, parameters)
@@ -317,12 +352,26 @@ The tools subcommand will allow users to manage custom tools (functions) that ag
    - Remove a tool with confirmation
    - Example: `letta tools delete <tool-id> --yes`
 
-#### Phase 2: Future Enhancements (Not in current scope)
+### Validation Features
+
+1. **JSON Schema Validation**:
+   - Validates required fields (`name`, `parameters`)
+   - Checks parameter structure (`type: "object"`, `properties`)
+   - Ensures each property has `type` and `description` fields
+   - Provides helpful error messages with examples
+
+2. **Python Docstring Validation**:
+   - Ensures functions have docstrings
+   - Validates presence of `Args:` section (required by Letta)
+   - Warns if `Returns:` section is missing
+   - Shows proper format in error messages
+
+### Future Enhancements
 - Parse Python files to auto-generate JSON schemas
 - Support for updating existing tools
 - Tool validation and testing
 - Export/import tool collections
-- Tag-based filtering
+- Tag-based filtering in CLI (API doesn't support it)
 
 ### File Format Requirements
 
