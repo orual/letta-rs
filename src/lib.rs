@@ -272,6 +272,9 @@ pub mod streaming;
 pub mod types;
 pub mod utils;
 
+#[cfg(test)]
+pub mod test_helpers;
+
 // Re-export main types for convenience
 pub use client::{ClientBuilder, ClientConfig, LettaClient};
 pub use environment::LettaEnvironment;

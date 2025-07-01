@@ -2,6 +2,7 @@
 
 use crate::types::common::{LettaId, Metadata, Timestamp};
 use crate::types::memory::Block;
+use bon::Builder;
 use serde::{Deserialize, Serialize};
 use smart_default::SmartDefault;
 use std::collections::HashMap;
@@ -114,6 +115,128 @@ pub struct LLMConfig {
     /// Additional configuration.
     #[serde(flatten)]
     pub extra: HashMap<String, serde_json::Value>,
+}
+
+impl LLMConfig {
+    /// Create a configuration for OpenAI models.
+    ///
+    /// # Example
+    /// ```
+    /// # use letta_rs::types::agent::LLMConfig;
+    /// let config = LLMConfig::openai("gpt-4");
+    /// assert_eq!(config.model, "gpt-4");
+    /// ```
+    pub fn openai(model: impl Into<String>) -> Self {
+        Self {
+            model: model.into(),
+            model_endpoint_type: ModelEndpointType::Openai,
+            model_endpoint: None,
+            context_window: Some(128000), // GPT-4 default
+            provider_name: Some("openai".to_string()),
+            provider_category: None,
+            model_wrapper: None,
+            put_inner_thoughts_in_kwargs: None,
+            handle: None,
+            temperature: None,
+            max_tokens: None,
+            enable_reasoner: None,
+            reasoning_effort: None,
+            max_reasoning_tokens: None,
+            extra: HashMap::new(),
+        }
+    }
+
+    /// Create a configuration for Anthropic models.
+    ///
+    /// # Example
+    /// ```
+    /// # use letta_rs::types::agent::LLMConfig;
+    /// let config = LLMConfig::anthropic("claude-3-sonnet-20240229");
+    /// assert_eq!(config.model, "claude-3-sonnet-20240229");
+    /// ```
+    pub fn anthropic(model: impl Into<String>) -> Self {
+        Self {
+            model: model.into(),
+            model_endpoint_type: ModelEndpointType::Anthropic,
+            model_endpoint: None,
+            context_window: Some(200000), // Claude 3 default
+            provider_name: Some("anthropic".to_string()),
+            provider_category: None,
+            model_wrapper: None,
+            put_inner_thoughts_in_kwargs: None,
+            handle: None,
+            temperature: None,
+            max_tokens: None,
+            enable_reasoner: None,
+            reasoning_effort: None,
+            max_reasoning_tokens: None,
+            extra: HashMap::new(),
+        }
+    }
+
+    /// Create a configuration for local models.
+    ///
+    /// # Example
+    /// ```
+    /// # use letta_rs::types::agent::LLMConfig;
+    /// let config = LLMConfig::local("llama2", "http://localhost:8080");
+    /// assert_eq!(config.model, "llama2");
+    /// ```
+    pub fn local(model: impl Into<String>, endpoint: impl Into<String>) -> Self {
+        Self {
+            model: model.into(),
+            model_endpoint_type: ModelEndpointType::Ollama,
+            model_endpoint: Some(endpoint.into()),
+            context_window: Some(4096), // Conservative default
+            provider_name: Some("ollama".to_string()),
+            provider_category: None,
+            model_wrapper: None,
+            put_inner_thoughts_in_kwargs: None,
+            handle: None,
+            temperature: None,
+            max_tokens: None,
+            enable_reasoner: None,
+            reasoning_effort: None,
+            max_reasoning_tokens: None,
+            extra: HashMap::new(),
+        }
+    }
+
+    /// Set the context window size.
+    pub fn with_context_window(mut self, size: u32) -> Self {
+        self.context_window = Some(size);
+        self
+    }
+
+    /// Set the temperature.
+    pub fn with_temperature(mut self, temperature: f32) -> Self {
+        self.temperature = Some(temperature);
+        self
+    }
+
+    /// Set the max tokens.
+    pub fn with_max_tokens(mut self, max_tokens: u32) -> Self {
+        self.max_tokens = Some(max_tokens);
+        self
+    }
+
+    /// Set the model endpoint.
+    pub fn with_endpoint(mut self, endpoint: impl Into<String>) -> Self {
+        self.model_endpoint = Some(endpoint.into());
+        self
+    }
+
+    /// Enable reasoner with optional effort and token limits.
+    pub fn with_reasoner(mut self, effort: Option<&str>, max_tokens: Option<u32>) -> Self {
+        self.enable_reasoner = Some(true);
+        if let Some(e) = effort {
+            self.reasoning_effort = Some(e.to_string());
+        }
+        if let Some(t) = max_tokens {
+            self.max_reasoning_tokens = Some(t);
+        }
+        self
+    }
 }
 
 /// Available model endpoint types
@@ -348,6 +471,160 @@ pub enum ToolRule {
     },
 }
 
+/// Conditional tool rule configuration.
+#[derive(Debug, Clone, Serialize, Deserialize, Builder)]
+pub struct ConditionalToolRule {
+    /// Tool name this rule applies to.
+    pub tool_name: String,
+    /// Optional prompt template.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub prompt_template: Option<String>,
+    /// The default child tool to be called.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub default_child: Option<String>,
+    /// Mapping from tool output values to child tool names.
+    #[builder(default)]
+    pub child_output_mapping: HashMap<String, String>,
+    /// Whether to throw an error when output doesn't match any case.
+    #[serde(default)]
+    #[builder(default)]
+    pub require_output_mapping: bool,
+}
+
+impl ConditionalToolRule {
+    /// Add a mapping from output value to child tool name.
+    pub fn with_mapping(mut self, output: impl Into<String>, child: impl Into<String>) -> Self {
+        self.child_output_mapping
+            .insert(output.into(), child.into());
+        self
+    }
+
+    /// Convert to a ToolRule.
+    pub fn build(self) -> ToolRule {
+        ToolRule::Conditional {
+            tool_name: self.tool_name,
+            prompt_template: self.prompt_template,
+            default_child: self.default_child,
+            child_output_mapping: self.child_output_mapping,
+            require_output_mapping: self.require_output_mapping,
+        }
+    }
+}
+
+impl ToolRule {
+    /// Create a continue loop rule.
+    pub fn continue_loop(tool_name: impl Into<String>) -> Self {
+        Self::ContinueLoop {
+            tool_name: tool_name.into(),
+            prompt_template: None,
+        }
+    }
+
+    /// Create an exit loop rule.
+    pub fn exit_loop(tool_name: impl Into<String>) -> Self {
+        Self::ExitLoop {
+            tool_name: tool_name.into(),
+            prompt_template: None,
+        }
+    }
+
+    /// Create a terminal rule (deprecated, prefer exit_loop).
+    pub fn terminal(tool_name: impl Into<String>) -> Self {
+        Self::Terminal {
+            tool_name: tool_name.into(),
+            prompt_template: None,
+        }
+    }
+
+    /// Create a max count per step rule.
+    pub fn max_count_per_step(tool_name: impl Into<String>, max_count_limit: u32) -> Self {
+        Self::MaxCountPerStep {
+            tool_name: tool_name.into(),
+            prompt_template: None,
+            max_count_limit,
+        }
+    }
+
+    /// Create a conditional tool rule builder.
+    pub fn conditional(tool_name: impl Into<String>) -> ConditionalToolRule {
+        ConditionalToolRule::builder()
+            .tool_name(tool_name.into())
+            .build()
+    }
+
+    /// Create a child tool rule.
+    pub fn child(tool_name: impl Into<String>, child_tool_name: impl Into<String>) -> Self {
+        Self::Child {
+            tool_name: tool_name.into(),
+            prompt_template: None,
+            child_tool_name: child_tool_name.into(),
+        }
+    }
+
+    /// Create a parent tool rule.
+    pub fn parent(tool_name: impl Into<String>, parent_tool_name: impl Into<String>) -> Self {
+        Self::Parent {
+            tool_name: tool_name.into(),
+            prompt_template: None,
+            parent_tool_name: parent_tool_name.into(),
+        }
+    }
+
+    /// Create a required before exit rule.
+    pub fn required_before_exit(tool_name: impl Into<String>) -> Self {
+        Self::RequiredBeforeExit {
+            tool_name: tool_name.into(),
+            prompt_template: None,
+        }
+    }
+
+    /// Create an init rule.
+    pub fn init(tool_name: impl Into<String>) -> Self {
+        Self::Init {
+            tool_name: tool_name.into(),
+            prompt_template: None,
+        }
+    }
+
+    /// Add a prompt template to this rule.
+    pub fn with_prompt_template(mut self, template: impl Into<String>) -> Self {
+        match &mut self {
+            Self::ContinueLoop {
+                prompt_template, ..
+            }
+            | Self::ExitLoop {
+                prompt_template, ..
+            }
+            | Self::Terminal {
+                prompt_template, ..
+            }
+            | Self::MaxCountPerStep {
+                prompt_template, ..
+            }
+            | Self::Child {
+                prompt_template, ..
+            }
+            | Self::Parent {
+                prompt_template, ..
+            }
+            | Self::RequiredBeforeExit {
+                prompt_template, ..
+            }
+            | Self::Init {
+                prompt_template, ..
+            } => {
+                *prompt_template = Some(template.into());
+            }
+            Self::Conditional {
+                prompt_template, ..
+            } => {
+                *prompt_template = Some(template.into());
+            }
+        }
+        self
+    }
+}
+
 /// Response format type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, SmartDefault)]
 #[serde(rename_all = "snake_case")]
@@ -368,6 +645,33 @@ pub struct ResponseFormat {
     /// JSON schema for validation (when type is json_object).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub json_schema: Option<serde_json::Value>,
+}
+
+impl ResponseFormat {
+    /// Create a text response format.
+    pub fn text() -> Self {
+        Self {
+            format_type: ResponseFormatType::Text,
+            json_schema: None,
+        }
+    }
+
+    /// Create a JSON response format with optional schema.
+    pub fn json(schema: Option<serde_json::Value>) -> Self {
+        Self {
+            format_type: ResponseFormatType::JsonObject,
+            json_schema: schema,
+        }
+    }
+
+    /// Create a JSON response format with a schema from a JSON string.
+    pub fn json_with_schema(schema_str: &str) -> Result<Self, serde_json::Error> {
+        let schema = serde_json::from_str(schema_str)?;
+        Ok(Self {
+            format_type: ResponseFormatType::JsonObject,
+            json_schema: Some(schema),
+        })
+    }
 }
 
 /// Agent state and configuration.
