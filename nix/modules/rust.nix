@@ -1,19 +1,171 @@
-{ inputs, ... }:
-{
+{ inputs, ... }: {
   imports = [
     inputs.rust-flake.flakeModules.default
     inputs.rust-flake.flakeModules.nixpkgs
     inputs.process-compose-flake.flakeModule
     inputs.cargo-doc-live.flakeModule
   ];
-  perSystem = { config, self', pkgs, lib, ... }: {
-    rust-project.crates."letta-rs".crane.args = {
-      buildInputs = lib.optionals pkgs.stdenv.isDarwin (
-        with pkgs.darwin.apple_sdk.frameworks; [
-          IOKit
-        ]
-      );
+  perSystem =
+    { config
+    , self'
+    , pkgs
+    , lib
+    , ...
+    }:
+    let
+      # Test script that runs local server tests
+      testLocalServer = pkgs.writeShellScript "test-local-server" ''
+        set -euo pipefail
+        
+        # We're in the build directory, which has the source
+        echo "🚀 Starting local Letta server for integration tests..."
+        
+        # Check if docker is available
+        if ! command -v docker &> /dev/null; then
+          echo "⚠️  Docker not available in build environment, skipping integration tests"
+          echo "   Run 'nix run .#test-local' to run tests with docker"
+          exit 0
+        fi
+        
+        # Start docker compose
+        ${pkgs.docker-compose}/bin/docker-compose up -d
+        
+        # Cleanup function
+        cleanup() {
+          echo "🛑 Stopping local Letta server..."
+          ${pkgs.docker-compose}/bin/docker-compose down || true
+        }
+        trap cleanup EXIT
+        
+        # Wait for server
+        echo "⏳ Waiting for server to be ready..."
+        max_attempts=30
+        attempt=0
+        
+        while ! ${pkgs.curl}/bin/curl -s http://localhost:8283/v1/health >/dev/null 2>&1; do
+          attempt=$((attempt + 1))
+          if [ $attempt -ge $max_attempts ]; then
+            echo "❌ Server failed to start after $max_attempts attempts"
+            exit 1
+          fi
+          echo "  Attempt $attempt/$max_attempts..."
+          sleep 2
+        done
+        
+        echo "✅ Server is ready!"
+        
+        # Run integration tests
+        echo "🧪 Running integration tests..."
+        cargo test --test '*' -- --nocapture
+      '';
+    in
+    {
+      rust-project.crates."letta-rs".crane.args = {
+        # Disable default cargo test
+        doCheck = false;
+
+        buildInputs = lib.optionals pkgs.stdenv.isDarwin (
+          with pkgs.darwin.apple_sdk.frameworks; [
+            IOKit
+          ]
+        );
+
+        # Custom check phase that runs unit tests only
+        checkPhase = ''
+          runHook preCheck
+          
+          echo "🧪 Running unit tests..."
+          cargo test --lib --bins --doc
+          
+          echo "✅ Unit tests passed!"
+          echo ""
+          echo "ℹ️  Integration tests require Docker and will run separately"
+          echo "   Use 'nix run .#test-local' to run integration tests"
+          
+          runHook postCheck
+        '';
+      };
+
+      packages = {
+        default = self'.packages.letta-rs;
+
+        # Package for running tests with local server
+        letta-rs-with-tests = self'.packages.letta-rs.overrideAttrs (oldAttrs: {
+          checkPhase = ''
+            runHook preCheck
+            
+            # Run unit tests
+            echo "🧪 Running unit tests..."
+            cargo test --lib --bins --doc
+            
+            # Run integration tests if requested
+            if [ "''${LETTA_RUN_INTEGRATION_TESTS:-0}" = "1" ]; then
+              ${testLocalServer}
+            else
+              echo "ℹ️  Skipping integration tests (set LETTA_RUN_INTEGRATION_TESTS=1 to enable)"
+            fi
+            
+            runHook postCheck
+          '';
+          doCheck = true;
+        });
+      };
+
+      # Apps for running different test suites
+      apps = {
+        test-local = {
+          type = "app";
+          program = toString (pkgs.writeShellScript "test-local-app" ''
+            cd ${self'.packages.letta-rs.src}
+            ${testLocalServer}
+          '');
+        };
+
+        test-cloud = {
+          type = "app";
+          program = toString (pkgs.writeShellScript "test-cloud-app" ''
+            cd ${self'.packages.letta-rs.src}
+            
+            if [ -z "''${LETTA_API_KEY:-}" ]; then
+              echo "❌ LETTA_API_KEY environment variable is required"
+              exit 1
+            fi
+            
+            echo "🌩️  Running cloud API tests..."
+            cargo test --test '*cloud*' -- --ignored --nocapture
+          '');
+        };
+
+        test-all = {
+          type = "app";
+          program = toString (pkgs.writeShellScript "test-all-app" ''
+            cd ${self'.packages.letta-rs.src}
+            
+            echo "🧪 Running all tests..."
+            
+            # Unit tests
+            echo "📦 Unit tests..."
+            cargo test --lib --bins --doc
+            
+            # Integration tests with local server
+            echo ""
+            echo "🏠 Local server integration tests..."
+            ${testLocalServer}
+            
+            # Cloud tests if API key is available
+            if [ -n "''${LETTA_API_KEY:-}" ]; then
+              echo ""
+              echo "☁️  Cloud API tests..."
+              cargo test --test '*cloud*' -- --ignored --nocapture
+            else
+              echo ""
+              echo "⚠️  Skipping cloud tests (LETTA_API_KEY not set)"
+            fi
+            
+            echo ""
+            echo "✅ All tests completed!"
+          '');
+        };
+      };
     };
-    packages.default = self'.packages.letta-rs;
-  };
 }

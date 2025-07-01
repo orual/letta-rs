@@ -28,7 +28,7 @@ impl ClientConfig {
         Ok(Self {
             base_url,
             auth: AuthConfig::default(),
-            timeout: Duration::from_secs(60),
+            timeout: Duration::from_secs(30),
             headers: HeaderMap::new(),
         })
     }

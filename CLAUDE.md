@@ -136,21 +136,52 @@ The API returns errors in various formats. Our error handler checks these fields
 
 ## Testing Strategy
 
-### Unit Tests
-- Test type serialization/deserialization
-- Test error parsing logic
-- Test pagination cursor handling
+### Running Tests
 
-### Integration Tests
-- Require local Letta server (docker compose)
-- Test full API workflows
-- Currently manual - need automation for CI
+```bash
+# Unit tests only (no server required)
+cargo test --lib --bins --doc
+
+# Local server integration tests (requires Docker)
+nix run .#test-local
+
+# Cloud API tests (requires LETTA_API_KEY)
+LETTA_API_KEY=your-key nix run .#test-cloud
+
+# Run all tests
+LETTA_API_KEY=your-key nix run .#test-all
+```
+
+### Test Environment Setup
+
+1. **Local Server Tests**: 
+   - Copy `server.env.example` to `server.env`
+   - The example file contains minimal config for embedded PostgreSQL
+   - Optional: Add your own API keys for Azure, Composio, etc.
+
+2. **Cloud API Tests**:
+   - Set `LETTA_API_KEY` environment variable
+   - Tests marked with `#[ignore]` require this
+
+### Test Categories
+
+- **Unit Tests**: Type serialization, error parsing, pagination logic
+- **Integration Tests**: Full API workflows against local server
+- **Cloud Tests**: Tests against production Letta API (marked `#[ignore]`)
+
+### CI Integration
+
+The Nix build runs unit tests by default. To enable integration tests in CI:
+
+```bash
+# Build and test with local server
+LETTA_RUN_INTEGRATION_TESTS=1 nix build .#letta-rs-with-tests
+```
 
 ### Known Test Issues
-- Cloud API tests require real API keys
-- No mock server implementation yet
-- CLI doesn't make actual API calls (TODO)
-- Archival memory test has server bug noted
+- Archival memory test has server response handling bug
+- CLI doesn't make actual API calls (generates JSON only)
+- Integration tests require Docker daemon access
 
 ## Adding New APIs Checklist
 
