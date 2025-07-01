@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use super::{LettaId, Message, MessageCreateContent};
+use super::{LettaId, Message, MessageCreateContent, MessageRole};
 
 /// Batch run status.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -83,18 +83,40 @@ pub struct BatchRun {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BatchMessageRequest {
     /// Messages to send.
-    pub messages: Vec<BatchMessageCreate>,
+    pub messages: Vec<BatchMessage>,
     /// Agent ID to send messages to.
     pub agent_id: LettaId,
 }
 
 /// Message to create in a batch.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BatchMessageCreate {
+pub struct BatchMessage {
     /// Message role (user, assistant, system, tool).
-    pub role: String,
-    /// Message content.
+    pub role: MessageRole,
+    /// Message content - can be a string or array of content parts.
     pub content: MessageCreateContent,
+    /// Optional message name.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    /// Optional tool calls for assistant messages.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool_calls: Option<Vec<super::MessageToolCall>>,
+    /// Optional tool call ID for tool messages.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool_call_id: Option<String>,
+}
+
+impl BatchMessage {
+    /// Create a simple user message.
+    pub fn user(content: impl Into<MessageCreateContent>) -> Self {
+        Self {
+            role: MessageRole::User,
+            content: content.into(),
+            name: None,
+            tool_calls: None,
+            tool_call_id: None,
+        }
+    }
 }
 
 /// Request to create a batch of messages.

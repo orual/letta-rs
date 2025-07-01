@@ -696,6 +696,43 @@ impl Default for MessageCreate {
     }
 }
 
+impl MessageCreate {
+    /// Create a simple user message.
+    pub fn user(content: impl Into<String>) -> Self {
+        Self {
+            role: MessageRole::User,
+            content: MessageCreateContent::String(content.into()),
+            ..Default::default()
+        }
+    }
+
+    /// Create a simple assistant message.
+    pub fn assistant(content: impl Into<String>) -> Self {
+        Self {
+            role: MessageRole::Assistant,
+            content: MessageCreateContent::String(content.into()),
+            name: None,
+            otid: None,
+            sender_id: None,
+            batch_item_id: None,
+            group_id: None,
+        }
+    }
+
+    /// Create a simple system message.
+    pub fn system(content: impl Into<String>) -> Self {
+        Self {
+            role: MessageRole::System,
+            content: MessageCreateContent::String(content.into()),
+            name: None,
+            otid: None,
+            sender_id: None,
+            batch_item_id: None,
+            group_id: None,
+        }
+    }
+}
+
 /// Content for message creation (can be simple string or complex types).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]

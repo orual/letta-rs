@@ -30,6 +30,7 @@ async fn test_list_batch_runs() -> LettaResult<()> {
 }
 
 #[tokio::test]
+#[ignore = "Batch API may not be implemented on all servers - requires LETTA_ENABLE_BATCH_JOB_POLLING=true"]
 async fn test_create_batch() -> LettaResult<()> {
     let client = get_test_client()?;
 
@@ -49,17 +50,11 @@ async fn test_create_batch() -> LettaResult<()> {
     let batch_request = CreateBatchRequest {
         requests: vec![
             BatchMessageRequest {
-                messages: vec![BatchMessageCreate {
-                    role: "user".to_string(),
-                    content: MessageCreateContent::String("Hello from batch test 1".to_string()),
-                }],
+                messages: vec![BatchMessage::user("Hello from batch test 1")],
                 agent_id: agent_id.clone(),
             },
             BatchMessageRequest {
-                messages: vec![BatchMessageCreate {
-                    role: "user".to_string(),
-                    content: MessageCreateContent::String("Hello from batch test 2".to_string()),
-                }],
+                messages: vec![BatchMessage::user("Hello from batch test 2")],
                 agent_id: agent_id.clone(),
             },
         ],

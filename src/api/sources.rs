@@ -157,7 +157,7 @@ impl<'a> SourceApi<'a> {
     ///
     /// ```no_run
     /// # use letta_rs::client::{ClientConfig, LettaClient};
-    /// # use letta_rs::pagination::{PaginationParams, PaginationExt};
+    /// # use letta_rs::{types::PaginationParams, pagination::PaginationExt};
     /// # use letta_rs::types::LettaId;
     /// # use futures::StreamExt;
     /// # use std::str::FromStr;
@@ -169,7 +169,9 @@ impl<'a> SourceApi<'a> {
     /// let mut stream = client.sources().paginated_files(&source_id, None);
     /// while let Some(file) = stream.next().await {
     ///     let file = file?;
-    ///     println!("File: {} - Size: {}", file.filename, file.size);
+    ///     println!("File: {} - Created: {:?}",
+    ///         file.file_name.as_deref().unwrap_or("unnamed"),
+    ///         file.created_at);
     /// }
     /// # Ok(())
     /// # }
@@ -217,7 +219,7 @@ impl<'a> SourceApi<'a> {
     ///
     /// ```no_run
     /// # use letta_rs::client::{ClientConfig, LettaClient};
-    /// # use letta_rs::pagination::{PaginationParams, PaginationExt};
+    /// # use letta_rs::{types::PaginationParams, pagination::PaginationExt};
     /// # use letta_rs::types::LettaId;
     /// # use futures::StreamExt;
     /// # use std::str::FromStr;

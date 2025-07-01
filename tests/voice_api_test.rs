@@ -13,6 +13,7 @@ fn get_test_client() -> LettaResult<LettaClient> {
 }
 
 #[tokio::test]
+#[ignore = "Voice API requires OPENAI_API_KEY to be configured"]
 async fn test_voice_chat_completions() -> LettaResult<()> {
     let client = get_test_client()?;
 

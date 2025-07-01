@@ -140,7 +140,8 @@ The API returns errors in various formats. Our error handler checks these fields
 
 ```bash
 # Unit tests only (no server required)
-cargo test --lib --bins --doc
+cargo test --lib --bins
+cargo test --doc
 
 # Local server integration tests (requires Docker)
 nix run .#test-local
@@ -171,11 +172,17 @@ LETTA_API_KEY=your-key nix run .#test-all
 
 ### CI Integration
 
-The Nix build runs unit tests by default. To enable integration tests in CI:
+The Nix build runs unit tests by default during `nix build`. Integration tests require Docker and must be run separately:
 
 ```bash
-# Build and test with local server
-LETTA_RUN_INTEGRATION_TESTS=1 nix build .#letta-rs-with-tests
+# In CI with Docker available:
+nix build  # Runs unit tests only
+nix run .#test-local  # Runs integration tests with Docker
+
+# Or use standard cargo in CI:
+cargo test --lib --bins  # Unit tests
+cargo test --doc         # Doc tests
+./nix/test-local-server.sh  # Integration tests
 ```
 
 ### Known Test Issues
@@ -240,6 +247,9 @@ LETTA_RUN_INTEGRATION_TESTS=1 nix build .#letta-rs-with-tests
 - Full batch message processing implementation
 - List batch messages with optional filtering by run/step IDs
 - Uses `ListBatchMessagesParams` with limit parameter (no cursor pagination)
+- **Note**: Server support varies - requires `LETTA_ENABLE_BATCH_JOB_POLLING=true` environment variable
+- Some server versions may return `NotImplementedError` when creating batches
+- Renamed `BatchMessageCreate` to `BatchMessage` with additional optional fields (name, tool_calls, tool_call_id)
 
 ### Telemetry API
 - Provider trace retrieval by step ID
@@ -252,6 +262,7 @@ LETTA_RUN_INTEGRATION_TESTS=1 nix build .#letta-rs-with-tests
 - Expects OpenAI-compatible chat completion requests based on docs
 - `create_voice_chat_completions` endpoint with optional `user-id` header support
 - Designed for streaming voice agent interactions with `voice_convo_agent` type
+- **Note**: Requires OPENAI_API_KEY environment variable configured on server
 - API structure is undocumented and subject to change
 
 ## Implementation Gotchas

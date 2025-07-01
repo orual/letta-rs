@@ -38,57 +38,66 @@
 //!
 //! ```rust,no_run
 //! use letta_rs::{LettaClient, types::*};
-//! use serde_json::json;
+//! use futures::StreamExt;
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!     let client = LettaClient::local()?;
 //!
-//!     // Create a new agent with custom memory
+//!     // Create a new agent
 //!     let agent_request = CreateAgentRequest {
-//!         name: "Assistant".to_string(),
+//!         name: Some("Assistant".to_string()),
 //!         agent_type: Some(AgentType::MemGPT),
-//!         llm_config: Some(json!({
-//!             "model_endpoint_type": "openai",
-//!             "model": "gpt-4",
-//!         })),
-//!         memory_blocks: Some(vec![
-//!             CreateBlock {
-//!                 block_type: BlockType::Human,
-//!                 value: "Name: Alice\nRole: Developer".to_string(),
-//!                 label: Some("human".to_string()),
-//!                 ..Default::default()
-//!             },
-//!             CreateBlock {
-//!                 block_type: BlockType::Persona,
-//!                 value: "You are a helpful coding assistant.".to_string(),
-//!                 label: Some("persona".to_string()),
-//!                 ..Default::default()
-//!             }
-//!         ]),
+//!         model: Some("letta/letta-free".to_string()),
+//!         embedding: Some("letta/letta-free".to_string()),
 //!         ..Default::default()
 //!     };
 //!
 //!     let agent = client.agents().create(agent_request).await?;
 //!     println!("Created agent: {}", agent.id);
 //!
-//!     // Send a message and stream the response
-//!     let stream = client
+//!     // Send a simple message
+//!     let request = CreateMessagesRequest {
+//!         messages: vec![MessageCreate::user("Hello! Can you help me with Rust?")],
+//!         ..Default::default()
+//!     };
+//!     
+//!     // Or create a more complex message with multiple content parts
+//!     let complex_message = MessageCreate {
+//!         role: MessageRole::User,
+//!         content: MessageCreateContent::ContentParts(vec![
+//!             ContentPart::Text(TextContent {
+//!                 text: "Here's an image that shows my error:".to_string(),
+//!             }),
+//!             ContentPart::Image(ImageContent {
+//!                 image_url: ImageUrl {
+//!                     url: "https://example.com/error-screenshot.png".to_string(),
+//!                     detail: None,
+//!                 },
+//!             }),
+//!         ]),
+//!         name: Some("Developer".to_string()),
+//!         ..Default::default()
+//!     };
+//!     
+//!     let response = client
 //!         .messages()
-//!         .send_streamed(&agent.id, "Hello! Can you help me with Rust?", None)
+//!         .create(&agent.id, request)
 //!         .await?;
 //!
-//!     // Handle streaming responses
-//!     tokio::pin!(stream);
-//!     while let Some(event) = stream.next().await {
-//!         match event? {
-//!             StreamingEvent::AssistantMessage(msg) => {
-//!                 print!("{}", msg.message);
+//!     // Process the response messages
+//!     for message in response.messages {
+//!         match &message {
+//!             LettaMessageUnion::ReasoningMessage(m) => {
+//!                 println!("Thinking: {}", m.reasoning);
 //!             }
-//!             StreamingEvent::FunctionCall(call) => {
-//!                 println!("\nCalling function: {}", call.name);
+//!             LettaMessageUnion::ToolReturnMessage(t) => {
+//!                 println!("Tool returned: {:?}", t.tool_return);
 //!             }
-//!             _ => {}
+//!             LettaMessageUnion::AssistantMessage(m) => {
+//!                 println!("Assistant: {}", m.content);
+//!             }
+//!             _ => {} // Other message types
 //!         }
 //!     }
 //!
@@ -100,32 +109,63 @@
 //!
 //! ```rust,no_run
 //! use letta_rs::{LettaClient, types::*};
+//! use std::str::FromStr;
+//! use futures::StreamExt;
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!     let client = LettaClient::local()?;
-//!     let agent_id = LettaId::new("agent-123");
+//!     let agent_id = LettaId::from_str("agent-00000000-0000-0000-0000-000000000000")?;
 //!
-//!     // Update core memory
-//!     client
+//!     // Get a specific core memory block
+//!     let block = client
 //!         .memory()
-//!         .update_core_memory(&agent_id, "human", "Name: Bob\nRole: Manager")
+//!         .get_core_memory_block(&agent_id, "human")
 //!         .await?;
+//!     
+//!     println!("Current human memory: {}", block.value);
+//!
+//!     // Update core memory block
+//!     let request = UpdateMemoryBlockRequest {
+//!         value: Some("Name: Bob\nRole: Manager".to_string()),
+//!         label: None,
+//!         limit: None,
+//!         name: None,
+//!         preserve_on_migration: None,
+//!         read_only: None,
+//!         description: None,
+//!         metadata: None,
+//!     };
+//!     let updated = client
+//!         .memory()
+//!         .update_core_memory_block(&agent_id, "human", request)
+//!         .await?;
+//!     
+//!     println!("Updated memory block: {}", updated.id.as_ref().unwrap());
 //!
 //!     // Add to archival memory
-//!     let memory = client
+//!     let archival_request = CreateArchivalMemoryRequest {
+//!         text: "Important: Project deadline is next Friday".to_string(),
+//!     };
+//!     let memories = client
 //!         .memory()
-//!         .insert_archival_memory(&agent_id, "Important: Project deadline is next Friday")
+//!         .create_archival_memory(&agent_id, archival_request)
 //!         .await?;
+//!     
+//!     println!("Inserted {} archival memory passages", memories.len());
 //!
 //!     // Search archival memory with semantic search
-//!     let results = client
+//!     let search_params = PaginationParams {
+//!         limit: Some(5),
+//!         ..Default::default()
+//!     };
+//!     let mut stream = client
 //!         .memory()
-//!         .search_archival_memory(&agent_id, "project deadline", Some(5))
-//!         .await?;
+//!         .archival_paginated(&agent_id, Some(search_params));
 //!
-//!     for result in results {
-//!         println!("Found: {} (relevance: {})", result.text, result.score.unwrap_or(0.0));
+//!     while let Some(result) = stream.next().await {
+//!         let result = result?;
+//!         println!("Found: {}", result.text);
 //!     }
 //!
 //!     Ok(())
@@ -135,19 +175,22 @@
 //! ## Pagination Support
 //!
 //! ```rust,no_run
-//! use letta_rs::LettaClient;
+//! use letta_rs::{LettaClient, types::*};
 //! use futures::StreamExt;
+//! use std::str::FromStr;
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!     let client = LettaClient::local()?;
 //!
 //!     // Use pagination to handle large result sets
+//!     let params = PaginationParams {
+//!         limit: Some(10),
+//!         ..Default::default()
+//!     };
 //!     let mut agent_stream = client
 //!         .agents()
-//!         .paginated()
-//!         .limit(10)
-//!         .build();
+//!         .paginated(Some(params));
 //!
 //!     // Automatically fetches next pages as needed
 //!     while let Some(agent) = agent_stream.next().await {
@@ -156,13 +199,14 @@
 //!     }
 //!
 //!     // Also works with archival memory
-//!     let agent_id = letta_rs::LettaId::new("agent-123");
+//!     let agent_id = LettaId::from_str("agent-00000000-0000-0000-0000-000000000000")?;
+//!     let memory_params = PaginationParams {
+//!         limit: Some(20),
+//!         ..Default::default()
+//!     };
 //!     let mut memory_stream = client
 //!         .memory()
-//!         .archival_paginated(&agent_id)
-//!         .text("important")
-//!         .limit(20)
-//!         .build();
+//!         .archival_paginated(&agent_id, Some(memory_params));
 //!
 //!     while let Some(memory) = memory_stream.next().await {
 //!         let memory = memory?;

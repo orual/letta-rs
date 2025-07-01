@@ -29,6 +29,11 @@ impl<'a> BatchApi<'a> {
 
     /// Create a batch of messages.
     ///
+    /// **Note**: The batch API may not be fully implemented in all Letta server versions.
+    /// The server must have `LETTA_ENABLE_BATCH_JOB_POLLING=true` configured to enable
+    /// batch processing functionality. Some servers may return a `NotImplementedError`
+    /// when attempting to create batches.
+    ///
     /// # Arguments
     ///
     /// * `request` - The batch creation request
@@ -36,6 +41,8 @@ impl<'a> BatchApi<'a> {
     /// # Errors
     ///
     /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// May return a 500 Internal Server Error with `NotImplementedError` if the server
+    /// does not support batch processing.
     pub async fn create(&self, request: CreateBatchRequest) -> LettaResult<BatchRun> {
         self.client.post("v1/messages/batches", &request).await
     }
