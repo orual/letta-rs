@@ -240,7 +240,67 @@ cargo test --doc         # Doc tests
 3. ~~**Finish CLI implementation**~~ - ✅ Completed - CLI now makes actual API calls
 4. **Implement upsert-from-function** - Port Python SDK's function-based agent creation feature
 
+## CLI Implementation Status
+
+The CLI (`letta` binary) is now fully functional with complete API integration. It supports:
+
+### Current Features
+- **Agent Management**: list, create, get, delete operations
+- **Health Check**: Server status verification
+- **Authentication**: API key via CLI arg or environment variable
+- **Output Formats**: JSON, pretty-printed JSON, and human-readable summaries
+- **Error Handling**: Proper exit codes and user-friendly error messages
+
+### Future CLI Improvements
+
+1. **Additional Commands**:
+   - `message` subcommand for sending messages to agents
+   - `memory` subcommand for viewing/editing agent memory
+   - `tools` subcommand for managing tools
+   - `sources` subcommand for document management
+   - `batch` subcommand for batch operations
+
+2. **Interactive Features**:
+   - Interactive agent chat mode (`letta chat <agent-id>`)
+   - Streaming message responses with progress indicators
+   - Auto-completion for agent IDs and tool names
+   - Configuration file support (`~/.letta/config.toml`)
+
+3. **Quality of Life**:
+   - Colored output with `--color` flag
+   - Table formatting for list commands
+   - Progress bars for long operations
+   - Retry logic for transient failures
+   - Cache frequently used data (agent lists, tool names)
+
+4. **Advanced Features**:
+   - Export/import agent configurations
+   - Bulk operations (delete multiple agents, batch create)
+   - Agent templates for quick creation
+   - Performance profiling with `--profile` flag
+   - Dry-run mode for testing commands
+
+5. **Developer Tools**:
+   - Debug output with request/response details
+   - API endpoint override for testing
+   - Mock mode for offline development
+   - OpenAPI spec generation from CLI
+
 ## Recent Implementation Notes
+
+### Ergonomic Improvements (Completed)
+
+All planned ergonomic improvements have been implemented:
+
+1. **Default Implementations**: Added for all request types with optional fields
+2. **Builder Patterns**: Implemented for `CreateAgentRequest`, `CreateBlockRequest`, `CreateToolRequest`, `ConditionalToolRule`
+3. **Smart Constructors**: 
+   - `Block::human()`, `Block::persona()`, `Block::new()` with builder methods
+   - `LLMConfig::openai()`, `LLMConfig::anthropic()`, `LLMConfig::local()`
+   - `ResponseFormat::text()`, `ResponseFormat::json()`
+4. **From/Into Implementations**: Used throughout for string conversions
+5. **Tool Rule Builders**: Complete set of constructors for all `ToolRule` variants
+6. **SmartDefault Trait**: Applied to enums like `AgentType` and `ResponseFormatType`
 
 ### Models API
 - Supports filtering by provider category using repeated query parameters for arrays
