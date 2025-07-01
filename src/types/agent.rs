@@ -2,6 +2,7 @@
 
 use crate::types::common::{LettaId, Metadata, Timestamp};
 use crate::types::memory::Block;
+use bon::Builder;
 use serde::{Deserialize, Serialize};
 use smart_default::SmartDefault;
 use std::collections::HashMap;
@@ -470,6 +471,46 @@ pub enum ToolRule {
     },
 }
 
+/// Conditional tool rule configuration.
+#[derive(Debug, Clone, Serialize, Deserialize, Builder)]
+pub struct ConditionalToolRule {
+    /// Tool name this rule applies to.
+    pub tool_name: String,
+    /// Optional prompt template.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub prompt_template: Option<String>,
+    /// The default child tool to be called.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub default_child: Option<String>,
+    /// Mapping from tool output values to child tool names.
+    #[builder(default)]
+    pub child_output_mapping: HashMap<String, String>,
+    /// Whether to throw an error when output doesn't match any case.
+    #[serde(default)]
+    #[builder(default)]
+    pub require_output_mapping: bool,
+}
+
+impl ConditionalToolRule {
+    /// Add a mapping from output value to child tool name.
+    pub fn with_mapping(mut self, output: impl Into<String>, child: impl Into<String>) -> Self {
+        self.child_output_mapping
+            .insert(output.into(), child.into());
+        self
+    }
+
+    /// Convert to a ToolRule.
+    pub fn build(self) -> ToolRule {
+        ToolRule::Conditional {
+            tool_name: self.tool_name,
+            prompt_template: self.prompt_template,
+            default_child: self.default_child,
+            child_output_mapping: self.child_output_mapping,
+            require_output_mapping: self.require_output_mapping,
+        }
+    }
+}
+
 impl ToolRule {
     /// Create a continue loop rule.
     pub fn continue_loop(tool_name: impl Into<String>) -> Self {
@@ -502,6 +543,13 @@ impl ToolRule {
             prompt_template: None,
             max_count_limit,
         }
+    }
+
+    /// Create a conditional tool rule builder.
+    pub fn conditional(tool_name: impl Into<String>) -> ConditionalToolRule {
+        ConditionalToolRule::builder()
+            .tool_name(tool_name.into())
+            .build()
     }
 
     /// Create a child tool rule.
@@ -553,9 +601,6 @@ impl ToolRule {
             | Self::MaxCountPerStep {
                 prompt_template, ..
             }
-            | Self::Conditional {
-                prompt_template, ..
-            }
             | Self::Child {
                 prompt_template, ..
             }
@@ -566,6 +611,11 @@ impl ToolRule {
                 prompt_template, ..
             }
             | Self::Init {
+                prompt_template, ..
+            } => {
+                *prompt_template = Some(template.into());
+            }
+            Self::Conditional {
                 prompt_template, ..
             } => {
                 *prompt_template = Some(template.into());
