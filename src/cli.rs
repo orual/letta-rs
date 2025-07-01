@@ -1,9 +1,12 @@
 //! Command-line interface for the Letta client.
 
 use clap::Parser;
-use letta::types::agent::{AgentType, CreateAgentRequest};
+use letta::types::agent::{AgentType, CreateAgentRequest, ListAgentsParams};
+use letta::types::common::LettaId;
 use letta::types::memory::Block;
 use letta::{auth::AuthConfig, ClientConfig, LettaClient};
+use std::io::Write;
+use std::str::FromStr;
 
 #[derive(Parser, Debug)]
 #[clap(author = "Orual", version, about = "Letta REST API client")]
@@ -142,8 +145,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         },
         Command::Health => {
             println!("Checking health...");
-            // TODO: Implement actual health check
-            println!("Health check not yet implemented");
+            check_health(&client).await?;
         }
     }
 
@@ -151,18 +153,44 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 async fn list_agents(
-    _client: &LettaClient,
+    client: &LettaClient,
     limit: u32,
     tags: Vec<String>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    println!("Listing agents (limit: {}, tags: {:?})...", limit, tags);
-    // TODO: Implement when agent API is ready
-    println!("Agent listing not yet implemented");
+    println!("Listing agents...");
+
+    let mut params = ListAgentsParams::default();
+    params.limit = Some(limit);
+    if !tags.is_empty() {
+        params.tags = Some(tags);
+    }
+
+    let agents = client.agents().list(Some(params)).await?;
+
+    if agents.is_empty() {
+        println!("No agents found.");
+    } else {
+        println!("Found {} agents:\n", agents.len());
+        for agent in agents {
+            println!("ID: {}", agent.id);
+            println!("Name: {}", agent.name);
+            println!("Type: {:?}", agent.agent_type);
+            if !agent.tags.is_empty() {
+                println!("Tags: {:?}", agent.tags);
+            }
+            if let Some(desc) = &agent.description {
+                println!("Description: {}", desc);
+            }
+            println!("Created: {}", agent.created_at);
+            println!();
+        }
+    }
+
     Ok(())
 }
 
 async fn create_agent(
-    _client: &LettaClient,
+    client: &LettaClient,
     name: String,
     system: Option<String>,
     agent_type: String,
@@ -197,42 +225,13 @@ async fn create_agent(
         request = request.system(system);
     }
 
-    // Add default memory blocks
+    // Add default memory blocks using the new ergonomic constructors
     request = request
-        .memory_block(Block {
-            id: None,
-            label: "human".to_string(),
-            value: "The human's name is not yet known.".to_string(),
-            limit: Some(2000),
-            is_template: false,
-            preserve_on_migration: false,
-            read_only: false,
-            description: None,
-            metadata: None,
-            name: None,
-            organization_id: None,
-            created_by_id: None,
-            last_updated_by_id: None,
-            created_at: None,
-            updated_at: None,
-        })
-        .memory_block(Block {
-            id: None,
-            label: "persona".to_string(),
-            value: format!("I am {}, a helpful AI assistant.", name),
-            limit: Some(2000),
-            is_template: false,
-            preserve_on_migration: false,
-            read_only: false,
-            description: None,
-            metadata: None,
-            name: None,
-            organization_id: None,
-            created_by_id: None,
-            last_updated_by_id: None,
-            created_at: None,
-            updated_at: None,
-        });
+        .memory_block(Block::human("The human's name is not yet known."))
+        .memory_block(Block::persona(format!(
+            "I am {}, a helpful AI assistant.",
+            name
+        )));
 
     let mut request = request.build();
 
@@ -246,59 +245,121 @@ async fn create_agent(
         request.embedding = Some(embedding);
     }
 
-    match output {
-        "json" => {
-            let json = serde_json::to_string(&request)?;
-            println!("{}", json);
-            // Don't print the note in JSON mode
-            return Ok(());
-        }
-        "pretty" => {
-            let json = serde_json::to_string_pretty(&request)?;
-            println!("Request JSON:\n{}", json);
-        }
-        _ => {
-            println!("Creating agent '{}'...", name);
-            println!("  Type: {:?}", agent_type);
-            if let Some(ref model) = request.model {
-                println!("  Model: {}", model);
-            }
-            if let Some(ref embedding) = request.embedding {
-                println!("  Embedding: {}", embedding);
-            }
-            if let Some(ref tags) = request.tags {
-                if !tags.is_empty() {
-                    println!("  Tags: {:?}", tags);
-                }
-            }
-            println!("\nUse --output json to see the full request.");
-        }
+    // Show what we're doing if not in JSON mode
+    if output != "json" {
+        println!("Creating agent '{}'...", name);
     }
 
-    // TODO: Actually send the request when API implementation is ready
-    println!("\nNote: API implementation not yet complete. Use the JSON output with curl for now.");
+    // Send the actual request
+    match client.agents().create(request).await {
+        Ok(agent) => match output {
+            "json" => {
+                let json = serde_json::to_string(&agent)?;
+                println!("{}", json);
+            }
+            "pretty" => {
+                let json = serde_json::to_string_pretty(&agent)?;
+                println!("{}", json);
+            }
+            _ => {
+                println!("✅ Agent created successfully!");
+                println!("\nAgent Details:");
+                println!("  ID: {}", agent.id);
+                println!("  Name: {}", agent.name);
+                println!("  Type: {:?}", agent.agent_type);
+                if let Some(ref llm_config) = agent.llm_config {
+                    println!("  Model: {}", llm_config.model);
+                }
+                if let Some(ref embedding_config) = agent.embedding_config {
+                    if let Some(ref model) = embedding_config.embedding_model {
+                        println!("  Embedding: {}", model);
+                    }
+                }
+                if !agent.tags.is_empty() {
+                    println!("  Tags: {:?}", agent.tags);
+                }
+                println!("\nUse 'letta agent get {}' to see full details.", agent.id);
+            }
+        },
+        Err(e) => {
+            eprintln!("❌ Error creating agent: {}", e);
+            std::process::exit(1);
+        }
+    }
 
     Ok(())
 }
 
 async fn get_agent(
-    _client: &LettaClient,
+    client: &LettaClient,
     id: &str,
-    _output: &str,
+    output: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    println!("Getting agent {}...", id);
-    // TODO: Implement when agent API is ready
-    println!("Agent get not yet implemented");
+    let agent_id = LettaId::from_str(id)?;
+    match client.agents().get(&agent_id).await {
+        Ok(agent) => match output {
+            "json" => {
+                let json = serde_json::to_string(&agent)?;
+                println!("{}", json);
+            }
+            "pretty" => {
+                let json = serde_json::to_string_pretty(&agent)?;
+                println!("{}", json);
+            }
+            _ => {
+                println!("Agent Details:");
+                println!("  ID: {}", agent.id);
+                println!("  Name: {}", agent.name);
+                println!("  Type: {:?}", agent.agent_type);
+                if let Some(ref system) = agent.system {
+                    println!("\nSystem Prompt:");
+                    println!("  {}", system);
+                }
+                if let Some(ref llm_config) = agent.llm_config {
+                    println!("\nLLM Configuration:");
+                    println!("  Model: {}", llm_config.model);
+                    if let Some(context) = llm_config.context_window {
+                        println!("  Context Window: {}", context);
+                    }
+                }
+                if let Some(ref embedding_config) = agent.embedding_config {
+                    println!("\nEmbedding Configuration:");
+                    if let Some(ref model) = embedding_config.embedding_model {
+                        println!("  Model: {}", model);
+                    }
+                    if let Some(dim) = embedding_config.embedding_dim {
+                        println!("  Dimensions: {}", dim);
+                    }
+                }
+                if !agent.tools.is_empty() {
+                    println!("\nTools: {} attached", agent.tools.len());
+                }
+                if !agent.tags.is_empty() {
+                    println!("\nTags: {:?}", agent.tags);
+                }
+                if let Some(ref desc) = agent.description {
+                    println!("\nDescription: {}", desc);
+                }
+                println!("\nCreated: {}", agent.created_at);
+                println!("Updated: {}", agent.updated_at);
+            }
+        },
+        Err(e) => {
+            eprintln!("❌ Error getting agent: {}", e);
+            std::process::exit(1);
+        }
+    }
     Ok(())
 }
 
 async fn delete_agent(
-    _client: &LettaClient,
+    client: &LettaClient,
     id: &str,
     yes: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     if !yes {
-        println!("Are you sure you want to delete agent {}? (y/N)", id);
+        print!("Are you sure you want to delete agent {}? (y/N) ", id);
+        std::io::stdout().flush()?;
         let mut input = String::new();
         std::io::stdin().read_line(&mut input)?;
         if !input.trim().eq_ignore_ascii_case("y") {
@@ -308,7 +369,32 @@ async fn delete_agent(
     }
 
     println!("Deleting agent {}...", id);
-    // TODO: Implement when agent API is ready
-    println!("Agent deletion not yet implemented");
+    let agent_id = LettaId::from_str(id)?;
+    match client.agents().delete(&agent_id).await {
+        Ok(_) => {
+            println!("✅ Agent deleted successfully.");
+        }
+        Err(e) => {
+            eprintln!("❌ Error deleting agent: {}", e);
+            std::process::exit(1);
+        }
+    }
+    Ok(())
+}
+
+async fn check_health(client: &LettaClient) -> Result<(), Box<dyn std::error::Error>> {
+    match client.health().check().await {
+        Ok(health) => {
+            println!("✅ Server is healthy!");
+            println!("\nServer Details:");
+            println!("  Status: {}", health.status);
+            println!("  Version: {}", health.version);
+        }
+        Err(e) => {
+            eprintln!("❌ Error checking health: {}", e);
+            eprintln!("\nThe server may be down or unreachable.");
+            std::process::exit(1);
+        }
+    }
     Ok(())
 }

@@ -235,9 +235,9 @@ cargo test --doc         # Doc tests
 
 ## Remaining Tasks
 
-1. **Rename crate to `letta`** - Update Cargo.toml and all references
+1. ~~**Rename crate to `letta`**~~ - ✅ Completed
 2. **Documentation pass** - Update examples to use new ergonomic features
-3. **Finish CLI implementation** - Currently only generates JSON, needs to make actual API calls
+3. ~~**Finish CLI implementation**~~ - ✅ Completed - CLI now makes actual API calls
 4. **Implement upsert-from-function** - Port Python SDK's function-based agent creation feature
 
 ## Recent Implementation Notes
