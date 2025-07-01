@@ -129,7 +129,7 @@ pub struct Run {
 }
 
 /// Configuration for a run request.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct RunRequestConfig {
     /// Agent ID for the run.
     #[serde(skip_serializing_if = "Option::is_none")]

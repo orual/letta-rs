@@ -279,7 +279,7 @@ pub struct UpdateCoreMemoryRequest {
 }
 
 /// Request to update a memory block.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct UpdateMemoryBlockRequest {
     /// Block label.
     #[serde(skip_serializing_if = "Option::is_none")]
