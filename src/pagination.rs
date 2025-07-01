@@ -324,7 +324,7 @@ pub trait PaginationExt {
     /// The item type returned by list operations.
     type Item;
 
-    /// Create a paginated stream for this API.
+    /// Create a paginated stream for this API.buil
     fn paginated(&self, params: Option<PaginationParams>) -> PaginatedStream<Self::Item>;
 }
 

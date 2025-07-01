@@ -5,3 +5,4 @@
 **.env
 .claude/settings.local.json
 /.pre-commit-config.yaml
+.mcp.json

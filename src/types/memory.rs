@@ -1,12 +1,13 @@
 //! Memory-related types.
 
 use crate::types::common::{LettaId, Metadata, Timestamp};
+use bon::Builder;
 use serde::{Deserialize, Serialize};
 
 use super::EmbeddingConfig;
 
 /// Request to create a new memory block.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, Builder)]
 pub struct CreateBlockRequest {
     /// Block value/content (required).
     pub value: String,
@@ -279,7 +280,7 @@ pub struct UpdateCoreMemoryRequest {
 }
 
 /// Request to update a memory block.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct UpdateMemoryBlockRequest {
     /// Block label.
     #[serde(skip_serializing_if = "Option::is_none")]

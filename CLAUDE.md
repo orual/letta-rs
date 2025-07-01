@@ -1,7 +1,32 @@
 # CLAUDE.md
 
-
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Git Workflow - Feature Branches
+
+**IMPORTANT**: Now that the project is stable, we use feature branches for all development:
+
+1. **Before starting any work**, create a feature branch:
+   ```bash
+   git checkout -b feature/descriptive-name
+   # Examples: feature/add-default-impls, fix/batch-api-errors, docs/improve-examples
+   ```
+
+2. **Commit regularly** as you work:
+   - After each logical change or set of related edits
+   - Use clear, descriptive commit messages
+   - Example: `git commit -m "Add Default impl for UpdateMemoryBlockRequest"`
+
+3. **When feature is complete**, create a pull request to main
+   - This keeps main stable and CI runs only on complete changes
+   - Allows for code review and discussion
+
+4. **Branch naming conventions**:
+   - `feature/` - New features or enhancements
+   - `fix/` - Bug fixes
+   - `docs/` - Documentation improvements
+   - `refactor/` - Code refactoring
+   - `test/` - Test additions or improvements
 
 ## Development Principles
 
@@ -207,6 +232,87 @@ cargo test --doc         # Doc tests
 - **Reference SDKs**: Check letta-node/ and letta-python/ submodules for patterns
 - **Local Testing**: Use local-server/ for development
 - **Type Discovery**: Use `curl -v` against local server to inspect responses
+
+## Potential Ergonomic Improvements
+
+### 1. Add Default Implementations
+Many request types with all-optional fields should implement `Default`:
+- `UpdateMemoryBlockRequest` - Currently requires listing all fields as None
+- `ListBlocksParams`, `ListToolsParams`, `UpdateBlockRequest`, `UpdateSourceRequest`
+- `ImportAgentRequest`, `AgentsSearchRequest`
+- `ListFilesParams`, `ListPassagesParams`
+
+### 2. Builder Patterns
+While `CreateAgentRequest` has a builder, these complex types need them too:
+- `CreateMessagesRequest` - Often just needs messages field
+- `CreateBlockRequest`, `CreateSourceRequest`, `CreateToolRequest`
+- `ProviderCreate`, `CreateIdentityRequest`
+- `MessageCreate` - Has convenience methods but builder would help complex cases
+
+### 3. Smart Constructors
+Common patterns that appear in tests could use convenience constructors:
+```rust
+// Instead of 15 fields with mostly None:
+Block::new("human", "The human's name is Bob")
+    .with_limit(1000)
+    .with_description("Human information")
+
+// LLM config shortcuts:
+LLMConfig::openai("gpt-4")
+LLMConfig::anthropic("claude-3")
+LLMConfig::local("llama2").with_endpoint("http://localhost:8080")
+```
+
+### 4. Missing From/Into Implementations
+- `impl From<&str> for LettaId` (for convenience in tests)
+- `impl From<Vec<String>> for MessageCreateContent` (for multi-part messages)
+- `impl TryFrom<&str> for ProviderType` (with proper error handling)
+
+### 5. Pagination Trait
+All pagination params follow same pattern but lack consistency:
+```rust
+trait PaginationExt {
+    fn limit(self, limit: u32) -> Self;
+    fn after(self, cursor: impl Into<String>) -> Self;
+}
+```
+
+### 6. Memory Block Presets
+Common memory blocks appear in every agent:
+```rust
+Block::human("Bob")  // Creates human memory block
+Block::persona("A helpful assistant")  // Creates persona block
+```
+
+### 7. Tool Rule Builders
+Complex enums like `ToolRule` need builders:
+```rust
+ToolRule::conditional("my_tool")
+    .with_mapping("yes", "approve_tool")
+    .with_mapping("no", "deny_tool")
+```
+
+### 8. Response Format Shortcuts
+```rust
+ResponseFormat::json(schema)
+ResponseFormat::text()
+```
+
+### 9. Test Helpers
+Common test patterns could have helpers:
+```rust
+CreateToolRequest::test_echo_tool("my_tool")
+CreateAgentRequest::test_agent("TestBot")
+```
+
+### 10. Error Context Methods
+Operations could add context to errors:
+```rust
+client.sources()
+    .upload_file(source_id, path)
+    .await
+    .context_file(path)?  // Adds file path to error
+```
 
 ## Recent Implementation Notes
 

@@ -1,10 +1,12 @@
 name: "CI Nix"
 on:
-  # Run only when pushing to master branch, and making PRs
-  push:
-    branches:
-      - main
-  pull_request:
+  # run manually
+  workflow_dispatch:
+  # Run only when pushing to main branch, and making PRs
+  # push:
+  #   branches:
+  #     - master
+  # pull_request:
 jobs:
   build:
     runs-on: ${{ matrix.os }}

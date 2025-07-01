@@ -4,12 +4,14 @@ use std::fmt;
 
 use crate::types::common::{LettaId, Timestamp};
 use serde::{Deserialize, Serialize};
+use smart_default::SmartDefault;
 
 /// Status of a job/run.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, SmartDefault)]
 #[serde(rename_all = "lowercase")]
 pub enum JobStatus {
     /// Job was created.
+    #[default]
     Created,
     /// Job is running.
     Running,
@@ -129,7 +131,7 @@ pub struct Run {
 }
 
 /// Configuration for a run request.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct RunRequestConfig {
     /// Agent ID for the run.
     #[serde(skip_serializing_if = "Option::is_none")]

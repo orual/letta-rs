@@ -275,7 +275,7 @@ pub mod utils;
 // Re-export main types for convenience
 pub use client::{ClientBuilder, ClientConfig, LettaClient};
 pub use environment::LettaEnvironment;
-pub use error::{LettaError, LettaResult};
+pub use error::{ErrorContext, LettaError, LettaResult};
 pub use types::*;
 
 /// Maximum number of retries for API calls

@@ -5,6 +5,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::fmt;
+use std::path::Path;
 
 /// Result type alias for Letta operations.
 pub type LettaResult<T> = Result<T, LettaError>;
@@ -1076,5 +1077,173 @@ mod tests {
         let field = LettaError::extract_validation_field("Validation failed", &json_body);
         assert!(field.is_some());
         assert!(field == Some("password".to_string()) || field == Some("username".to_string()));
+    }
+
+    #[test]
+    fn test_error_context_trait() {
+        use super::ErrorContext;
+
+        // Test context_file
+        let result: LettaResult<()> = Err(LettaError::Io(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "file not found",
+        )));
+        let err = result.context_file("/path/to/file.txt").unwrap_err();
+        // IO errors get wrapped in a new IO error with the path
+        match &err {
+            LettaError::Io(io_err) => {
+                assert!(io_err.to_string().contains("/path/to/file.txt"));
+            }
+            _ => panic!("Expected IO error"),
+        }
+
+        // Test context_resource
+        let result: LettaResult<()> = Err(LettaError::Api {
+            status: 404,
+            message: "Not found".to_string(),
+            code: None,
+            body: ErrorBody::Text("Not found".to_string()),
+            url: None,
+            method: None,
+        });
+        let err = result.context_resource("agent", "agent-123").unwrap_err();
+        assert!(matches!(err, LettaError::NotFound { .. }));
+
+        // Test context_operation
+        let result: LettaResult<()> = Err(LettaError::Api {
+            status: 500,
+            message: "Internal error".to_string(),
+            code: None,
+            body: ErrorBody::Text("Internal error".to_string()),
+            url: None,
+            method: None,
+        });
+        let err = result.context_operation("uploading file").unwrap_err();
+        assert!(err.to_string().contains("while uploading file"));
+
+        // Test context_msg
+        let result: LettaResult<()> = Err(LettaError::Config {
+            message: "Invalid config".to_string(),
+        });
+        let err = result.context_msg("during initialization").unwrap_err();
+        assert!(err.to_string().contains("during initialization"));
+    }
+}
+
+/// Extension trait for adding context to Letta errors.
+///
+/// This trait provides convenient methods for attaching additional context
+/// to errors, making debugging easier by providing more information about
+/// what operation failed and with what parameters.
+pub trait ErrorContext<T> {
+    /// Add file path context to an error.
+    ///
+    /// # Example
+    /// ```no_run
+    /// # use letta_rs::error::{LettaResult, ErrorContext};
+    /// # async fn example() -> LettaResult<()> {
+    /// # let path = "test.txt";
+    /// # let result: LettaResult<()> = Ok(());
+    /// result.context_file(path)?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    fn context_file<P: AsRef<Path>>(self, path: P) -> LettaResult<T>;
+
+    /// Add resource context to an error.
+    ///
+    /// # Example
+    /// ```no_run
+    /// # use letta_rs::error::{LettaResult, ErrorContext};
+    /// # async fn example() -> LettaResult<()> {
+    /// # let result: LettaResult<()> = Ok(());
+    /// result.context_resource("agent", "agent-123")?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    fn context_resource(self, resource_type: &str, id: &str) -> LettaResult<T>;
+
+    /// Add operation context to an error.
+    ///
+    /// # Example
+    /// ```no_run
+    /// # use letta_rs::error::{LettaResult, ErrorContext};
+    /// # async fn example() -> LettaResult<()> {
+    /// # let result: LettaResult<()> = Ok(());
+    /// result.context_operation("uploading file")?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    fn context_operation(self, operation: &str) -> LettaResult<T>;
+
+    /// Add custom context message to an error.
+    ///
+    /// # Example
+    /// ```no_run
+    /// # use letta_rs::error::{LettaResult, ErrorContext};
+    /// # async fn example() -> LettaResult<()> {
+    /// # let result: LettaResult<()> = Ok(());
+    /// result.context_msg("while processing batch request")?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    fn context_msg(self, msg: &str) -> LettaResult<T>;
+}
+
+impl<T> ErrorContext<T> for LettaResult<T> {
+    fn context_file<P: AsRef<Path>>(self, path: P) -> LettaResult<T> {
+        self.map_err(|e| {
+            let path_str = path.as_ref().display().to_string();
+            match e {
+                LettaError::Io(io_err) => LettaError::Io(std::io::Error::new(
+                    io_err.kind(),
+                    format!("{}: {}", path_str, io_err),
+                )),
+                other => LettaError::Config {
+                    message: format!("Error with file '{}': {}", path_str, other),
+                },
+            }
+        })
+    }
+
+    fn context_resource(self, resource_type: &str, id: &str) -> LettaResult<T> {
+        self.map_err(|e| match e {
+            LettaError::Api { status, .. } if status == 404 => LettaError::NotFound {
+                resource_type: resource_type.to_string(),
+                id: id.to_string(),
+            },
+            other => LettaError::Config {
+                message: format!("Error with {} '{}': {}", resource_type, id, other),
+            },
+        })
+    }
+
+    fn context_operation(self, operation: &str) -> LettaResult<T> {
+        self.map_err(|e| match e {
+            LettaError::Api {
+                status,
+                message,
+                code,
+                body,
+                url,
+                method,
+            } => LettaError::Api {
+                status,
+                message: format!("{} (while {})", message, operation),
+                code,
+                body,
+                url,
+                method,
+            },
+            other => LettaError::Config {
+                message: format!("Error while {}: {}", operation, other),
+            },
+        })
+    }
+
+    fn context_msg(self, msg: &str) -> LettaResult<T> {
+        self.map_err(|e| LettaError::Config {
+            message: format!("{}: {}", msg, e),
+        })
     }
 }

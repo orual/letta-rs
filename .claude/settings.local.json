@@ -42,5 +42,7 @@
       "WebFetch(domain:raw.githubusercontent.com)"
     ],
     "deny": []
-  }
+  },
+  "enabledMcpjsonServers": ["language-server"],
+  "enableAllProjectMcpServers": true
 }

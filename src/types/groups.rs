@@ -114,7 +114,7 @@ pub struct RoundRobinManager {
 }
 
 /// Round-robin manager update.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct RoundRobinManagerUpdate {
     /// Maximum turns per conversation.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -129,7 +129,7 @@ pub struct SupervisorManager {
 }
 
 /// Supervisor manager update.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct SupervisorManagerUpdate {
     /// The agent ID that acts as supervisor.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -150,7 +150,7 @@ pub struct DynamicManager {
 }
 
 /// Dynamic manager update.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct DynamicManagerUpdate {
     /// The agent ID that manages dynamic routing.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -174,7 +174,7 @@ pub struct SleeptimeManager {
 }
 
 /// Sleep-time manager update.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct SleeptimeManagerUpdate {
     /// The agent ID that manages sleep-time scheduling.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -198,7 +198,7 @@ pub struct VoiceSleeptimeManager {
 }
 
 /// Voice sleep-time manager update.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct VoiceSleeptimeManagerUpdate {
     /// The agent ID that manages voice sleep-time.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -227,7 +227,7 @@ pub struct GroupCreate {
 }
 
 /// Request to update a group.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct GroupUpdate {
     /// Agent IDs to include in the group.
     #[serde(skip_serializing_if = "Option::is_none")]
