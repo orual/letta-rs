@@ -1,5 +1,6 @@
 //! Identity-related types.
 
+use bon::Builder;
 use serde::{Deserialize, Serialize};
 
 use super::LettaId;
@@ -64,7 +65,7 @@ pub struct Identity {
 }
 
 /// Request to create a new identity.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Builder)]
 pub struct CreateIdentityRequest {
     /// Unique identifier key.
     pub identifier_key: String,

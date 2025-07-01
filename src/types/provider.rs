@@ -1,5 +1,6 @@
 //! Provider-related types.
 
+use bon::Builder;
 use serde::{Deserialize, Serialize};
 
 use super::{LettaId, ProviderCategory};
@@ -125,7 +126,7 @@ impl std::fmt::Display for ProviderType {
 }
 
 /// Request to create a new provider.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Builder)]
 pub struct ProviderCreate {
     /// Provider name.
     pub name: String,

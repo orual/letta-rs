@@ -46,6 +46,7 @@ chrono = { version = "0.4", features = ["serde"] }
 bytes = "1.0"
 rand = "0.8"
 smart-default = "0.7"
+bon = "3.0"
 
 # Optional CLI (for examples/debugging)
 clap = { version = "4.5", features = ["derive", "env"], optional = true }

@@ -2,6 +2,7 @@
 
 use crate::types::agent::EmbeddingConfig;
 use crate::types::common::{LettaId, Metadata, Timestamp};
+use bon::Builder;
 use serde::{Deserialize, Serialize};
 use smart_default::SmartDefault;
 
@@ -153,7 +154,7 @@ pub struct FileUploadMetadata {
 }
 
 /// Create source request.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Builder)]
 pub struct CreateSourceRequest {
     /// Source name.
     pub name: String,

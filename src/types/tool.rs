@@ -1,6 +1,7 @@
 //! Tool-related types.
 
 use crate::types::common::{LettaId, Metadata, Timestamp};
+use bon::Builder;
 use serde::{Deserialize, Serialize};
 
 /// Tool type enum.
@@ -156,7 +157,7 @@ pub struct Tool {
 ///     """
 ///     return f"Processed: {message}"
 /// ```
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, Builder)]
 pub struct CreateToolRequest {
     /// Tool description.
     #[serde(skip_serializing_if = "Option::is_none")]

@@ -1,6 +1,7 @@
 //! Message-related types for the Letta API.
 
 use crate::types::common::{LettaId, Timestamp};
+use bon::Builder;
 use serde::{Deserialize, Serialize};
 
 /// Message role.
@@ -659,7 +660,7 @@ pub struct ToolReturnMessage {
 }
 
 /// Request to create a message for Letta agents.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Builder)]
 pub struct MessageCreate {
     /// Message role.
     pub role: MessageRole,
@@ -839,7 +840,7 @@ pub struct LettaUsageStatistics {
 }
 
 /// Parameters for creating messages.
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, Builder)]
 pub struct CreateMessagesRequest {
     /// Messages to send.
     pub messages: Vec<MessageCreate>,
