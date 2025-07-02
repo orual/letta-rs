@@ -69,9 +69,8 @@ just pre-commit-all # Format and lint
 # Local Letta server for testing
 cd local-server && docker compose up -d
 
-# CLI tool (generates JSON, doesn't make API calls)
-cargo run --features cli -- agent create -n "Test" -o json | \
-  curl -X POST http://localhost:8283/v1/agents -H "Content-Type: application/json" -d @-
+# CLI tool (fully functional with all API operations)
+cargo run --features cli -- --help
 ```
 
 ## Architecture
@@ -235,12 +234,267 @@ cargo test --doc         # Doc tests
 
 ## Remaining Tasks
 
-1. **Rename crate to `letta`** - Update Cargo.toml and all references
-2. **Documentation pass** - Update examples to use new ergonomic features
-3. **Finish CLI implementation** - Currently only generates JSON, needs to make actual API calls
-4. **Implement upsert-from-function** - Port Python SDK's function-based agent creation feature
+1. ~~**Rename crate to `letta`**~~ - ✅ Completed
+2. ~~**Finish CLI refactoring**~~ - ✅ Completed, all commands migrated to modular structure
+3. ~~**Implement sources CLI commands**~~ - ✅ Completed with full file/passage management
+4. **Documentation pass** - Update README with CLI installation and examples
+5. **Implement upsert-from-function** - Port Python SDK's function-based agent creation feature
+
+Note: Batch CLI implementation skipped due to server-side API limitations.
+
+## Sources CLI Implementation Plan
+
+### Overview
+The sources subcommand will allow users to manage document sources and files for agent knowledge. Sources are collections of documents that can be attached to agents for knowledge retrieval.
+
+### Command Structure
+```bash
+letta sources list                                    # List all sources
+letta sources create -n "docs" -e "letta/letta-free" # Create a source
+letta sources get <source-id>                        # Get source details
+letta sources delete <source-id>                     # Delete a source
+
+# File operations
+letta sources files list <source-id>                 # List files in source
+letta sources files upload <source-id> -f file.pdf   # Upload file
+letta sources files get <source-id> <file-id>        # Get file details
+letta sources files delete <source-id> <file-id>     # Delete file
+
+# Passage operations  
+letta sources passages list <source-id>              # List passages
+```
+
+### Implementation Details
+
+#### Phase 1: Basic Source Management
+```rust
+// List sources using existing API
+client.sources().list(params).await
+
+// Create source with embedding config
+let request = CreateSourceRequest {
+    name: "documentation",
+    embedding_config: EmbeddingConfig::default()
+        .embedding_model("letta/letta-free"),
+    description: Some("Product documentation"),
+    instructions: Some("Use for product-related questions"),
+};
+client.sources().create(request).await
+
+// Get/Delete operations
+client.sources().get(&source_id).await
+client.sources().delete(&source_id).await
+```
+
+#### Phase 2: File Management
+```rust
+// Upload file with multipart form
+let file_data = std::fs::read("document.pdf")?;
+client.sources().upload_file(&source_id, "document.pdf", file_data).await
+
+// List files with pagination
+let params = ListFilesParams { limit: Some(20), ..Default::default() };
+client.sources().paginated_files(&source_id, Some(params)).await
+
+// Get file metadata and optionally content
+client.sources().get_file(&source_id, &file_id).await
+```
+
+#### Phase 3: Passage Management
+```rust
+// List passages (document chunks after processing)
+let params = ListPassagesParams { limit: Some(50), ..Default::default() };
+client.sources().paginated_passages(&source_id, Some(params)).await
+```
+
+### Key Considerations
+1. **File Upload**: Use multipart/form-data with proper content-type detection
+2. **Status Tracking**: Files have processing status (pending, completed, failed)
+3. **Pagination**: Both files and passages support cursor-based pagination
+4. **Error Handling**: Handle file size limits, unsupported formats gracefully
+5. **Progress Indication**: Show upload/processing progress for large files
+
+## CLI Implementation Status
+
+The CLI (`letta` binary) is now fully functional with complete API integration. It supports:
+
+### Current Features
+- **Agent Management**: list, create, get, delete operations
+- **Message Management**: send messages with streaming support (token-by-token display)
+- **Memory Management**: view/edit core memory, search/add archival memory
+- **Tool Management**: create, list, get, delete custom tools with validation
+- **Source Management**: create sources, upload/manage files, view processed passages
+- **Health Check**: Server status verification
+- **Authentication**: API key via CLI arg or environment variable
+- **Output Formats**: JSON, pretty-printed JSON, and human-readable summaries
+- **Error Handling**: Rich miette diagnostics with context and suggestions
+
+### CLI Refactoring Status (Completed)
+
+The CLI has been successfully refactored from a single 1700+ line file into a modular structure:
+
+#### Current Structure
+```
+src/
+├── bin/
+│   └── letta.rs          # Binary entry point
+├── cli/
+│   ├── mod.rs           # Main CLI module with Args and run()
+│   └── commands/
+│       ├── mod.rs       # Commands module with health check
+│       ├── agent.rs     # Agent commands (✅ fully implemented)
+│       ├── message.rs   # Message commands (✅ fully implemented)
+│       ├── memory.rs    # Memory commands (✅ fully implemented)
+│       ├── tools.rs     # Tools commands (✅ fully implemented)
+│       └── sources.rs   # Sources commands (✅ fully implemented)
+```
+
+#### Completed Improvements
+- ✅ All existing CLI functionality migrated to modular structure
+- ✅ Replaced `std::process::exit()` with proper error propagation using miette
+- ✅ Fixed all compilation errors and type mismatches
+- ✅ Better error handling with rich diagnostics throughout
+- ✅ Deleted old 1700+ line cli_old.rs file
+
+### Future CLI Improvements
+
+1. **Additional Commands**:
+   - `batch` subcommand for batch operations (skipped due to server API limitations)
+
+2. **Interactive Features**:
+   - Interactive agent chat mode (`letta chat <agent-id>`)
+   - Streaming message responses with progress indicators
+   - Auto-completion for agent IDs and tool names
+   - Configuration file support (`~/.letta/config.toml`)
+
+3. **Quality of Life**:
+   - Colored output with `--color` flag
+   - Table formatting for list commands
+   - Progress bars for long operations
+   - Retry logic for transient failures
+   - Cache frequently used data (agent lists, tool names)
+
+4. **Advanced Features**:
+   - Export/import agent configurations
+   - Bulk operations (delete multiple agents, batch create)
+   - Agent templates for quick creation
+   - Performance profiling with `--profile` flag
+   - Dry-run mode for testing commands
+
+5. **Developer Tools**:
+   - Debug output with request/response details
+   - API endpoint override for testing
+   - Mock mode for offline development
+   - OpenAPI spec generation from CLI
+
+## Tools CLI Implementation (Completed)
+
+### Overview
+The tools subcommand allows users to manage custom tools (functions) that agents can use. The implementation supports:
+1. Creating tools from Python files with separate JSON schema files
+2. Listing available tools with pagination
+3. Getting tool details including source code and schemas
+4. Deleting tools with confirmation
+5. Comprehensive validation of JSON schemas and Python docstrings
+
+### Implemented Features
+1. **Create Tool from Python File**:
+   - Accept Python file path containing the tool implementation
+   - Accept JSON file path for function schema (name, description, parameters)
+   - Read both files and create the tool via API
+   - Example: `letta tools create --python tool.py --schema tool_schema.json`
+
+2. **List Tools**:
+   - Show all available tools with pagination support
+   - Display tool names, descriptions, and IDs
+   - Example: `letta tools list --limit 20`
+
+3. **Get Tool Details**:
+   - Show full tool information including source code
+   - Example: `letta tools get <tool-id>`
+
+4. **Delete Tool**:
+   - Remove a tool with confirmation
+   - Example: `letta tools delete <tool-id> --yes`
+
+### Validation Features
+
+1. **JSON Schema Validation**:
+   - Validates required fields (`name`, `parameters`)
+   - Checks parameter structure (`type: "object"`, `properties`)
+   - Ensures each property has `type` and `description` fields
+   - Provides helpful error messages with examples
+
+2. **Python Docstring Validation**:
+   - Ensures functions have docstrings
+   - Validates presence of `Args:` section (required by Letta)
+   - Warns if `Returns:` section is missing
+   - Shows proper format in error messages
+
+### Future Enhancements
+- Parse Python files to auto-generate JSON schemas
+- Support for updating existing tools
+- Tool validation and testing
+- Export/import tool collections
+- Tag-based filtering in CLI (API doesn't support it)
+
+### File Format Requirements
+
+#### Python Tool File
+Standard Python function with docstring:
+```python
+def my_tool(arg1: str, arg2: int = 0) -> str:
+    """Tool description here.
+    
+    Args:
+        arg1: Description of arg1
+        arg2: Description of arg2
+        
+    Returns:
+        Description of return value
+    """
+    # Implementation
+    return f"Result: {arg1} {arg2}"
+```
+
+#### Tool Schema JSON File
+```json
+{
+  "name": "my_tool",
+  "description": "Tool description here",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "arg1": {
+        "type": "string",
+        "description": "Description of arg1"
+      },
+      "arg2": {
+        "type": "integer",
+        "description": "Description of arg2",
+        "default": 0
+      }
+    },
+    "required": ["arg1"]
+  }
+}
+```
 
 ## Recent Implementation Notes
+
+### Ergonomic Improvements (Completed)
+
+All planned ergonomic improvements have been implemented:
+
+1. **Default Implementations**: Added for all request types with optional fields
+2. **Builder Patterns**: Implemented for `CreateAgentRequest`, `CreateBlockRequest`, `CreateToolRequest`, `ConditionalToolRule`
+3. **Smart Constructors**: 
+   - `Block::human()`, `Block::persona()`, `Block::new()` with builder methods
+   - `LLMConfig::openai()`, `LLMConfig::anthropic()`, `LLMConfig::local()`
+   - `ResponseFormat::text()`, `ResponseFormat::json()`
+4. **From/Into Implementations**: Used throughout for string conversions
+5. **Tool Rule Builders**: Complete set of constructors for all `ToolRule` variants
+6. **SmartDefault Trait**: Applied to enums like `AgentType` and `ResponseFormatType`
 
 ### Models API
 - Supports filtering by provider category using repeated query parameters for arrays

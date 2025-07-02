@@ -24,7 +24,7 @@ impl<'a> RunApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn list(&self, agent_ids: &[LettaId]) -> LettaResult<Vec<Run>> {
         let id_list = agent_ids.iter().map(|id| id.as_str()).collect::<Vec<_>>();
         self.client
@@ -40,7 +40,7 @@ impl<'a> RunApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn get(&self, run_id: &LettaId) -> LettaResult<Run> {
         self.client.get(&format!("v1/runs/{}", run_id)).await
     }
@@ -53,7 +53,7 @@ impl<'a> RunApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn get_messages(&self, run_id: &LettaId) -> LettaResult<Vec<LettaMessageUnion>> {
         self.client
             .get(&format!("v1/runs/{}/messages", run_id))
@@ -68,7 +68,7 @@ impl<'a> RunApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn get_steps(&self, run_id: &LettaId) -> LettaResult<Vec<Step>> {
         self.client.get(&format!("v1/runs/{}/steps", run_id)).await
     }
@@ -81,7 +81,7 @@ impl<'a> RunApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn list_active(&self, agent_ids: &[LettaId]) -> LettaResult<Vec<Run>> {
         let id_list = agent_ids.iter().map(|id| id.as_str()).collect::<Vec<_>>();
         self.client

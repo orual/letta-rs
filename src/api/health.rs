@@ -23,7 +23,7 @@ impl<'a> HealthApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn check(&self) -> LettaResult<Health> {
         // Note: trailing slash is required on this endpoint
         self.client.get("v1/health/").await

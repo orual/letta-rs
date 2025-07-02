@@ -16,15 +16,74 @@ Unlike the Letta-provided TypeScript and Python libraries, this was not generate
 - **Rich Error Handling**: Detailed error types
 - **Well Tested**: Extensive test coverage with integration tests
 
-## Installation
+## Usage
 
 Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
 letta = "0.1.2"
-tokio = { version = "1", features = ["full"] }
 ```
+
+## CLI Installation
+
+The letta crate includes an optional CLI tool for interacting with Letta servers:
+
+```bash
+# Install from crates.io
+cargo install letta --features cli
+
+# Or build from source
+git clone https://github.com/orual/letta-rs
+cd letta-rs
+cargo install --path . --features cli
+```
+
+After installation, the `letta-client` command will be available in your PATH.
+
+### CLI Configuration
+
+Set your API key (for cloud deployments):
+```bash
+export LETTA_API_KEY=your-api-key
+```
+
+Or specify the base URL for local servers:
+```bash
+export LETTA_BASE_URL=http://localhost:8283
+```
+
+### CLI Usage Examples
+
+```bash
+# Check server health
+letta-client health
+
+# List all agents
+letta-client agent list
+
+# Create a new agent
+letta-client agent create -n "My Assistant" -m letta/letta-free
+
+# Send a message to an agent (with streaming)
+letta-client message send -a <agent-id> "Hello, how are you?"
+
+# View agent memory
+letta-client memory view -a <agent-id>
+
+# Upload a document to a source
+letta-client sources create -n "docs" -e letta/letta-free
+letta-client sources files upload <source-id> -f document.pdf
+
+# Get help for any command
+letta-client --help
+letta-client agent --help
+```
+
+The CLI supports multiple output formats:
+- `--output summary` (default) - Human-readable format
+- `--output json` - JSON output for scripting
+- `--output pretty` - Pretty-printed JSON
 
 ## Compatibility
 
@@ -115,32 +174,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## Examples
 
-### Creating an Agent with Custom Memory
+### Creating an Agent with Builder Pattern
 
 ```rust
-use letta::types::{CreateBlock, BlockType};
+use letta::types::{CreateAgentRequest, AgentType, Block, LLMConfig};
 
-// Create custom memory blocks
-let human_block = CreateBlock {
-    block_type: BlockType::Human,
-    value: "Name: Alice\nRole: Software Engineer".to_string(),
-    label: Some("human".to_string()),
-    ..Default::default()
-};
+// Create agent using builder pattern
+let request = CreateAgentRequest::builder()
+    .name("My Assistant")
+    .agent_type(AgentType::MemGPT)
+    .description("A helpful coding assistant")
+    .model("letta/letta-free")  // Shorthand for LLM config
+    .embedding("letta/letta-free")  // Shorthand for embedding config
+    .build();
 
-let persona_block = CreateBlock {
-    block_type: BlockType::Persona,
-    value: "You are a helpful coding assistant.".to_string(),
-    label: Some("persona".to_string()),
-    ..Default::default()
-};
+let agent = client.agents().create(request).await?;
 
-// Create agent with custom memory
-let agent_request = CreateAgentRequest {
-    name: "Code Helper".to_string(),
-    memory_blocks: Some(vec![human_block, persona_block]),
-    ..Default::default()
-};
+// Create custom memory blocks with builder
+let human_block = Block::human("Name: Alice\nRole: Software Engineer")
+    .label("human");
+
+let persona_block = Block::persona("You are a helpful coding assistant.")
+    .label("persona");
 ```
 
 ### Working with Archival Memory
@@ -185,6 +240,7 @@ while let Some(agent) = agent_stream.next().await {
 use letta::types::{CreateToolRequest, Tool};
 
 // Create a custom tool
+// Note: this example is simplified, see the tool documentation for details.
 let tool = CreateToolRequest {
     name: "get_weather".to_string(),
     description: Some("Get current weather for a location".to_string()),
@@ -276,27 +332,8 @@ cd local-server
 docker compose up -d
 
 # Run integration tests
-cargo test --features integration
+cargo test
 ```
-
-### CLI Tool
-
-A CLI tool is included for testing and development:
-
-```bash
-# Install the CLI
-cargo install --path . --features cli
-
-# List agents
-letta agent list
-
-# Create an agent (generates JSON for curl)
-letta agent create -n "Test Agent" -m "letta/letta-free" -o json
-```
-
-## Contributing
-
-Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ## License
 
@@ -312,5 +349,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Related Projects
 
 - [Letta](https://github.com/letta-ai/letta) - The official Letta server
-- [letta-node](https://github.com/letta-ai/letta-node) - TypeScript/JavaScript SDK
-- [letta-python](https://github.com/letta-ai/letta-python) - Python SDK
+- [letta-node](https://github.com/letta-ai/letta-node) - Official TypeScript/JavaScript SDK
+- [letta-python](https://github.com/letta-ai/letta-python) - Official Python SDK

@@ -33,7 +33,7 @@ impl<'a> TemplateApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn list(
         &self,
         offset: Option<String>,
@@ -73,7 +73,7 @@ impl<'a> TemplateApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn create_from_agent(
         &self,
         agent_id: &LettaId,
@@ -96,7 +96,7 @@ impl<'a> TemplateApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails.
+    /// Returns a [crate::error::LettaError] if the request fails.
     pub async fn version_template(
         &self,
         agent_id: &LettaId,
@@ -121,7 +121,7 @@ impl<'a> TemplateApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn migrate_agent(
         &self,
         agent_id: &LettaId,
@@ -144,7 +144,7 @@ impl<'a> TemplateApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn create_agents_from_template(
         &self,
         project: &str,
@@ -177,7 +177,7 @@ impl LettaClient {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn get_agent_memory_variables(
         &self,
         agent_id: &LettaId,

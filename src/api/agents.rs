@@ -30,7 +30,7 @@ impl<'a> AgentApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn list(&self, params: Option<ListAgentsParams>) -> LettaResult<Vec<AgentState>> {
         self.client
             .get_with_query("v1/agents", &params.unwrap_or_default())
@@ -45,7 +45,7 @@ impl<'a> AgentApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn create(&self, request: CreateAgentRequest) -> LettaResult<AgentState> {
         self.client.post("v1/agents", &request).await
     }
@@ -59,7 +59,7 @@ impl<'a> AgentApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn create_with_project(
         &self,
         request: CreateAgentRequest,
@@ -86,7 +86,7 @@ impl<'a> AgentApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn get(&self, agent_id: &LettaId) -> LettaResult<AgentState> {
         self.client.get(&format!("v1/agents/{}", agent_id)).await
     }
@@ -99,7 +99,7 @@ impl<'a> AgentApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails.
+    /// Returns a [crate::error::LettaError] if the request fails.
     pub async fn delete(&self, agent_id: &LettaId) -> LettaResult<()> {
         self.client
             .delete_no_response(&format!("v1/agents/{}", agent_id))
@@ -118,7 +118,7 @@ impl<'a> AgentApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn summarize_agent_conversation(
         &self,
         agent_id: &LettaId,
@@ -140,7 +140,7 @@ impl<'a> AgentApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn count(&self) -> LettaResult<u32> {
         self.client.get("v1/agents/count").await
     }
@@ -153,7 +153,7 @@ impl<'a> AgentApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn export_file(&self, agent_id: &LettaId) -> LettaResult<String> {
         // The export endpoint returns a JSON object, but we need to return it as a string
         let json_value: serde_json::Value = self
@@ -174,7 +174,7 @@ impl<'a> AgentApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn import_file(
         &self,
         file_path: &Path,
@@ -231,7 +231,7 @@ impl<'a> AgentApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn search(&self, request: AgentsSearchRequest) -> LettaResult<AgentsSearchResponse> {
         self.client.post("v1/agents/search", &request).await
     }
@@ -244,7 +244,7 @@ impl<'a> AgentApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn list_groups(&self, agent_id: &LettaId) -> LettaResult<Vec<crate::types::Group>> {
         self.client
             .get(&format!("v1/agents/{}/groups", agent_id))

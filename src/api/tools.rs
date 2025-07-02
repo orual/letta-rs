@@ -78,7 +78,7 @@ impl<'a> ToolApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn list_mcp_servers(
         &self,
     ) -> LettaResult<std::collections::HashMap<String, McpServerConfig>> {
@@ -93,7 +93,7 @@ impl<'a> ToolApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn list_mcp_servers_with_user(
         &self,
         user_id: &str,
@@ -114,7 +114,7 @@ impl<'a> ToolApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn add_mcp_server(
         &self,
         config: McpServerConfig,
@@ -130,7 +130,7 @@ impl<'a> ToolApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn list_mcp_tools_by_server(&self, server_name: &str) -> LettaResult<Vec<McpTool>> {
         self.client
             .get(&format!("v1/tools/mcp/servers/{}/tools", server_name))
@@ -146,7 +146,7 @@ impl<'a> ToolApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn add_mcp_tool(&self, server_name: &str, tool_name: &str) -> LettaResult<Tool> {
         self.client
             .post(
@@ -164,7 +164,7 @@ impl<'a> ToolApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails.
+    /// Returns a [crate::error::LettaError] if the request fails.
     pub async fn delete_mcp_server(&self, server_name: &str) -> LettaResult<()> {
         self.client
             .delete_no_response(&format!("v1/tools/mcp/servers/{}", server_name))
@@ -180,7 +180,7 @@ impl<'a> ToolApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn update_mcp_server(
         &self,
         server_name: &str,
@@ -203,7 +203,7 @@ impl<'a> ToolApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn test_mcp_server(
         &self,
         request: TestMcpServerRequest,
@@ -229,7 +229,7 @@ impl<'a> ToolApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if:
+    /// Returns a [crate::error::LettaError] if:
     /// - The source code has validation errors
     /// - The tool execution fails
     /// - The request fails or response cannot be parsed
@@ -282,7 +282,7 @@ impl<'a> ToolApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn list_composio_apps(&self) -> LettaResult<Vec<crate::types::tool::AppModel>> {
         self.client.get("/v1/tools/composio/apps").await
     }
@@ -300,7 +300,7 @@ impl<'a> ToolApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn list_composio_actions(
         &self,
         app_name: &str,
@@ -325,7 +325,7 @@ impl<'a> ToolApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn add_composio_tool(&self, action_name: &str) -> LettaResult<Tool> {
         self.client
             .post(
@@ -347,7 +347,7 @@ impl<'a> ToolApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn upsert_base_tools(&self) -> LettaResult<Vec<Tool>> {
         self.client
             .post("/v1/tools/add-base-tools", &serde_json::json!({}))

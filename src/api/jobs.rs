@@ -27,7 +27,7 @@ impl<'a> JobApi<'a> {
     /// # Errors
     ///
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn list(
         &self,
         status: Option<JobStatus>,
@@ -61,7 +61,7 @@ impl<'a> JobApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn list_active(
         &self,
         status: Option<JobStatus>,
@@ -90,7 +90,7 @@ impl<'a> JobApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn get(&self, job_id: &LettaId) -> LettaResult<Job> {
         self.client.get(&format!("v1/jobs/{}", job_id)).await
     }
@@ -103,7 +103,7 @@ impl<'a> JobApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails.
+    /// Returns a [crate::error::LettaError] if the request fails.
     pub async fn delete(&self, job_id: &LettaId) -> LettaResult<String> {
         self.client.delete(&format!("v1/jobs/{}", job_id)).await
     }
@@ -129,7 +129,7 @@ impl<'a> StepApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn list(
         &self,
         params: Option<crate::types::ListStepsParams>,
@@ -147,7 +147,7 @@ impl<'a> StepApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn get(&self, step_id: &LettaId) -> LettaResult<Step> {
         self.client.get(&format!("v1/steps/{}", step_id)).await
     }
@@ -161,7 +161,7 @@ impl<'a> StepApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails.
+    /// Returns a [crate::error::LettaError] if the request fails.
     pub async fn provide_feedback(
         &self,
         step_id: &LettaId,
