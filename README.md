@@ -4,9 +4,7 @@ A Rust client library for the [Letta](https://letta.com) REST API, providing idi
 
 Unlike the Letta-provided TypeScript and Python libraries, this was not generated from the OpenAPI spec, but implemented by hand (with substantial LLM assistance). As such it exposes things in slightly different, mildly opinionated ways, and includes a number of Rust-oriented affordances.
 
-[![Crates.io](https://img.shields.io/crates/v/letta.svg)](https://crates.io/crates/letta)
-[![Documentation](https://docs.rs/letta/badge.svg)](https://docs.rs/letta)
-[![License](https://img.shields.io/crates/l/letta.svg)](LICENSE)
+[![Crates.io](https://img.shields.io/crates/v/letta.svg)](https://crates.io/crates/letta) [![Documentation](https://docs.rs/letta/badge.svg)](https://docs.rs/letta) [![License](https://img.shields.io/crates/l/letta.svg)](./LICENSE)
 
 ## Features
 
