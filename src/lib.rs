@@ -21,7 +21,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! letta = "0.1.2"
+//! letta = "0.1.3"
 //! ```
 //!
 //! ### CLI Installation
@@ -88,8 +88,8 @@
 //!
 //! | letta client | letta server |
 //! |--------------|--------------|
-//! | 0.1.2        | 0.8.8        |
-//! | 0.1.0-0.1.1  | 0.8.x        |
+//! | 0.1.3        | 0.8.8        |
+//! | 0.1.0-0.1.2  | 0.8.x        |
 //!
 //! ## Quick Start
 //!
@@ -145,7 +145,7 @@
 //!         messages: vec![MessageCreate::user("Hello! Can you help me with Rust?")],
 //!         ..Default::default()
 //!     };
-//!     
+//!
 //!     // Or create a more complex message with multiple content parts
 //!     let complex_message = MessageCreate {
 //!         role: MessageRole::User,
@@ -163,7 +163,7 @@
 //!         name: Some("Developer".to_string()),
 //!         ..Default::default()
 //!     };
-//!     
+//!
 //!     let response = client
 //!         .messages()
 //!         .create(&agent.id, request)
@@ -206,7 +206,7 @@
 //!         .memory()
 //!         .get_core_memory_block(&agent_id, "human")
 //!         .await?;
-//!     
+//!
 //!     println!("Current human memory: {}", block.value);
 //!
 //!     // Update core memory block
@@ -224,7 +224,7 @@
 //!         .memory()
 //!         .update_core_memory_block(&agent_id, "human", request)
 //!         .await?;
-//!     
+//!
 //!     println!("Updated memory block: {}", updated.id.as_ref().unwrap());
 //!
 //!     // Add to archival memory
@@ -235,7 +235,7 @@
 //!         .memory()
 //!         .create_archival_memory(&agent_id, archival_request)
 //!         .await?;
-//!     
+//!
 //!     println!("Inserted {} archival memory passages", memories.len());
 //!
 //!     // Search archival memory with semantic search
@@ -273,10 +273,10 @@
 //!         source_code: r#"
 //! def get_weather(location: str) -> str:
 //!     """Get weather for a location.
-//!     
+//!
 //!     Args:
 //!         location: The location to get weather for
-//!         
+//!
 //!     Returns:
 //!         Weather information as a string
 //!     """
