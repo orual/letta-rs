@@ -236,42 +236,83 @@ cargo test --doc         # Doc tests
 ## Remaining Tasks
 
 1. ~~**Rename crate to `letta`**~~ - ✅ Completed
-2. **Documentation pass** - Update examples to use new ergonomic features
-3. **Finish CLI refactoring** - In progress, modularizing 1700+ line file
-4. **Implement upsert-from-function** - Port Python SDK's function-based agent creation feature
+2. ~~**Finish CLI refactoring**~~ - ✅ Completed, all commands migrated to modular structure
+3. **Documentation pass** - Update examples to use new ergonomic features
+4. **Implement sources CLI commands** - Document management functionality
+5. **Implement batch CLI commands** - Batch operations support
+6. **Implement upsert-from-function** - Port Python SDK's function-based agent creation feature
 
 ## Sources CLI Implementation Plan
 
 ### Overview
-The sources subcommand will allow users to manage document sources and files for agent knowledge. The implementation will support:
-1. Creating and managing sources
-2. Uploading files to sources
-3. Listing and viewing files
-4. Managing passages (document chunks)
-5. Attaching/detaching sources to/from agents
+The sources subcommand will allow users to manage document sources and files for agent knowledge. Sources are collections of documents that can be attached to agents for knowledge retrieval.
 
-### Implementation Plan
+### Command Structure
+```bash
+letta sources list                                    # List all sources
+letta sources create -n "docs" -e "letta/letta-free" # Create a source
+letta sources get <source-id>                        # Get source details
+letta sources delete <source-id>                     # Delete a source
+
+# File operations
+letta sources files list <source-id>                 # List files in source
+letta sources files upload <source-id> -f file.pdf   # Upload file
+letta sources files get <source-id> <file-id>        # Get file details
+letta sources files delete <source-id> <file-id>     # Delete file
+
+# Passage operations  
+letta sources passages list <source-id>              # List passages
+```
+
+### Implementation Details
 
 #### Phase 1: Basic Source Management
-1. **List Sources**: Show all available sources
-2. **Create Source**: Create a new source with name and embedding config
-3. **Get Source**: Show source details
-4. **Delete Source**: Remove a source
+```rust
+// List sources using existing API
+client.sources().list(params).await
+
+// Create source with embedding config
+let request = CreateSourceRequest {
+    name: "documentation",
+    embedding_config: EmbeddingConfig::default()
+        .embedding_model("letta/letta-free"),
+    description: Some("Product documentation"),
+    instructions: Some("Use for product-related questions"),
+};
+client.sources().create(request).await
+
+// Get/Delete operations
+client.sources().get(&source_id).await
+client.sources().delete(&source_id).await
+```
 
 #### Phase 2: File Management
-1. **Upload File**: Upload a file to a source
-2. **List Files**: Show files in a source with status
-3. **Get File**: Show file details and optionally content
-4. **Delete File**: Remove a file from a source
+```rust
+// Upload file with multipart form
+let file_data = std::fs::read("document.pdf")?;
+client.sources().upload_file(&source_id, "document.pdf", file_data).await
+
+// List files with pagination
+let params = ListFilesParams { limit: Some(20), ..Default::default() };
+client.sources().paginated_files(&source_id, Some(params)).await
+
+// Get file metadata and optionally content
+client.sources().get_file(&source_id, &file_id).await
+```
 
 #### Phase 3: Passage Management
-1. **List Passages**: Show document chunks from a source
-2. **Search Passages**: Find relevant passages by query
+```rust
+// List passages (document chunks after processing)
+let params = ListPassagesParams { limit: Some(50), ..Default::default() };
+client.sources().paginated_passages(&source_id, Some(params)).await
+```
 
-#### Phase 4: Agent Source Management
-1. **List Agent Sources**: Show sources attached to an agent
-2. **Attach Source**: Attach a source to an agent
-3. **Detach Source**: Remove a source from an agent
+### Key Considerations
+1. **File Upload**: Use multipart/form-data with proper content-type detection
+2. **Status Tracking**: Files have processing status (pending, completed, failed)
+3. **Pagination**: Both files and passages support cursor-based pagination
+4. **Error Handling**: Handle file size limits, unsupported formats gracefully
+5. **Progress Indication**: Show upload/processing progress for large files
 
 ## CLI Implementation Status
 
@@ -287,11 +328,11 @@ The CLI (`letta` binary) is now fully functional with complete API integration. 
 - **Output Formats**: JSON, pretty-printed JSON, and human-readable summaries
 - **Error Handling**: Rich miette diagnostics with context and suggestions
 
-### CLI Refactoring Status (In Progress)
+### CLI Refactoring Status (Completed)
 
-The CLI is being refactored from a single 1700+ line file into a modular structure:
+The CLI has been successfully refactored from a single 1700+ line file into a modular structure:
 
-#### New Structure
+#### Current Structure
 ```
 src/
 ├── bin/
@@ -300,35 +341,19 @@ src/
 │   ├── mod.rs           # Main CLI module with Args and run()
 │   └── commands/
 │       ├── mod.rs       # Commands module with health check
-│       ├── agent.rs     # Agent commands (partially migrated)
-│       ├── message.rs   # Message commands (enums only)
-│       ├── memory.rs    # Memory commands (enums only)
-│       ├── tools.rs     # Tools commands (enums only)
-│       └── sources.rs   # Sources commands (enums only)
-└── cli_old.rs           # Original implementation (to be deleted)
+│       ├── agent.rs     # Agent commands (✅ fully implemented)
+│       ├── message.rs   # Message commands (✅ fully implemented)
+│       ├── memory.rs    # Memory commands (✅ fully implemented)
+│       ├── tools.rs     # Tools commands (✅ fully implemented)
+│       └── sources.rs   # Sources commands (❌ not yet implemented)
 ```
 
-#### Migration Progress
-- ✅ Module structure created
-- ✅ Command enums moved to separate files
-- ✅ Binary entry point moved to src/bin/letta.rs
-- ✅ Agent command handler partially implemented
-- ⏳ Fixing compilation errors (imports, API changes)
-- ❌ Message command implementations need migration
-- ❌ Memory command implementations need migration
-- ❌ Tools command implementations need migration
-- ❌ Sources command implementations need migration
-
-#### Key Issues to Fix
-1. **Import paths**: Change `letta::` to `crate::` throughout
-2. **API changes**: 
-   - `ClientConfig::new()` now takes base_url parameter
-   - `AuthConfig::BearerToken` → `AuthConfig::bearer()`
-   - `client.health()` → `client.health().check()`
-   - `LLMConfig` → `LlmConfig`
-   - Agent fields: `tags` is no longer Option, `created_at` is DateTime not Option
-   - `llm_config` and `embedding_config` are Options in AgentState
-3. **Type mismatches**: Various fields changed from Option<T> to T or vice versa
+#### Completed Improvements
+- ✅ All existing CLI functionality migrated to modular structure
+- ✅ Replaced `std::process::exit()` with proper error propagation using miette
+- ✅ Fixed all compilation errors and type mismatches
+- ✅ Better error handling with rich diagnostics throughout
+- ✅ Deleted old 1700+ line cli_old.rs file
 
 ### Future CLI Improvements
 
