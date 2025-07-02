@@ -237,7 +237,7 @@ cargo test --doc         # Doc tests
 
 1. ~~**Rename crate to `letta`**~~ - ✅ Completed
 2. **Documentation pass** - Update examples to use new ergonomic features
-3. ~~**Finish CLI implementation**~~ - ✅ Completed - CLI now makes actual API calls
+3. **Finish CLI refactoring** - In progress, modularizing 1700+ line file
 4. **Implement upsert-from-function** - Port Python SDK's function-based agent creation feature
 
 ## Sources CLI Implementation Plan
@@ -287,14 +287,54 @@ The CLI (`letta` binary) is now fully functional with complete API integration. 
 - **Output Formats**: JSON, pretty-printed JSON, and human-readable summaries
 - **Error Handling**: Rich miette diagnostics with context and suggestions
 
+### CLI Refactoring Status (In Progress)
+
+The CLI is being refactored from a single 1700+ line file into a modular structure:
+
+#### New Structure
+```
+src/
+├── bin/
+│   └── letta.rs          # Binary entry point
+├── cli/
+│   ├── mod.rs           # Main CLI module with Args and run()
+│   └── commands/
+│       ├── mod.rs       # Commands module with health check
+│       ├── agent.rs     # Agent commands (partially migrated)
+│       ├── message.rs   # Message commands (enums only)
+│       ├── memory.rs    # Memory commands (enums only)
+│       ├── tools.rs     # Tools commands (enums only)
+│       └── sources.rs   # Sources commands (enums only)
+└── cli_old.rs           # Original implementation (to be deleted)
+```
+
+#### Migration Progress
+- ✅ Module structure created
+- ✅ Command enums moved to separate files
+- ✅ Binary entry point moved to src/bin/letta.rs
+- ✅ Agent command handler partially implemented
+- ⏳ Fixing compilation errors (imports, API changes)
+- ❌ Message command implementations need migration
+- ❌ Memory command implementations need migration
+- ❌ Tools command implementations need migration
+- ❌ Sources command implementations need migration
+
+#### Key Issues to Fix
+1. **Import paths**: Change `letta::` to `crate::` throughout
+2. **API changes**: 
+   - `ClientConfig::new()` now takes base_url parameter
+   - `AuthConfig::BearerToken` → `AuthConfig::bearer()`
+   - `client.health()` → `client.health().check()`
+   - `LLMConfig` → `LlmConfig`
+   - Agent fields: `tags` is no longer Option, `created_at` is DateTime not Option
+   - `llm_config` and `embedding_config` are Options in AgentState
+3. **Type mismatches**: Various fields changed from Option<T> to T or vice versa
+
 ### Future CLI Improvements
 
-1. **Additional Commands**:
-   - `message` subcommand for sending messages to agents
-   - `memory` subcommand for viewing/editing agent memory
-   - `tools` subcommand for managing tools
-   - `sources` subcommand for document management
-   - `batch` subcommand for batch operations
+1. **Additional Commands** (after refactoring):
+   - `sources` subcommand for document management (planned)
+   - `batch` subcommand for batch operations (planned)
 
 2. **Interactive Features**:
    - Interactive agent chat mode (`letta chat <agent-id>`)

@@ -3,7 +3,6 @@
 pub mod commands;
 
 use clap::Parser;
-use miette::IntoDiagnostic;
 
 #[derive(Parser, Debug)]
 #[clap(author = "Orual", version, about = "Letta REST API client")]
@@ -31,6 +30,7 @@ pub struct Args {
     pub command: Command,
 }
 
+/// Available commands.
 #[derive(Parser, Debug)]
 pub enum Command {
     /// Agent operations

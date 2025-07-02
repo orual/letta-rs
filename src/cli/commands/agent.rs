@@ -1,14 +1,14 @@
 //! Agent command implementations.
 
-use crate::types::agent::{AgentType, CreateAgentRequest, EmbeddingConfig, ListAgentsParams};
+use crate::types::agent::{AgentType, CreateAgentRequest, ListAgentsParams};
 use crate::types::common::LettaId;
-use crate::types::models::LlmConfig;
 use crate::LettaClient;
 use clap::Parser;
 use miette::{miette, Context, IntoDiagnostic};
 use std::io::Write;
 use std::str::FromStr;
 
+/// Agent-related commands.
 #[derive(Parser, Debug)]
 pub enum AgentCommand {
     /// List all agents
@@ -62,6 +62,7 @@ pub enum AgentCommand {
     },
 }
 
+/// Handle agent commands.
 pub async fn handle(cmd: AgentCommand, client: &LettaClient) -> miette::Result<()> {
     match cmd {
         AgentCommand::List { limit, tags } => list_agents(client, limit, tags).await,
@@ -101,26 +102,15 @@ async fn list_agents(client: &LettaClient, limit: u32, tags: Vec<String>) -> mie
                 if let Some(desc) = &agent.description {
                     println!("Description: {}", desc);
                 }
-                if let Some(tags) = &agent.tags {
-                    if !tags.is_empty() {
-                        println!("Tags: {:?}", tags);
-                    }
+                if !agent.tags.is_empty() {
+                    println!("Tags: {:?}", agent.tags);
                 }
-                println!(
-                    "Created: {}",
-                    agent
-                        .created_at
-                        .map(|t| t.to_string())
-                        .unwrap_or_else(|| "unknown".to_string())
-                );
+                println!("Created: {}", agent.created_at);
                 println!();
             }
             Ok(())
         }
-        Err(e) => {
-            eprintln!("Error listing agents: {}", e);
-            std::process::exit(1);
-        }
+        Err(e) => return Err(e).wrap_err("Failed to list agents")?,
     }
 }
 
@@ -139,29 +129,49 @@ async fn create_agent(
     }
 
     // Parse agent type
-    let agent_type = AgentType::from_str(&agent_type)
-        .map_err(|_| miette!("Invalid agent type: {}", agent_type))?;
+    let agent_type = match agent_type.as_str() {
+        "memgpt" => AgentType::MemGPT,
+        "memgpt_v2" => AgentType::MemGPTv2,
+        "react" => AgentType::React,
+        "workflow" => AgentType::Workflow,
+        "split_thread" => AgentType::SplitThread,
+        "sleeptime" => AgentType::Sleeptime,
+        "voice_convo" => AgentType::VoiceConvo,
+        "voice_sleeptime" => AgentType::VoiceSleeptime,
+        _ => return Err(miette!("Invalid agent type: {}. Valid types: memgpt, memgpt_v2, react, workflow, split_thread, sleeptime, voice_convo, voice_sleeptime", agent_type)),
+    };
 
     // Build the request
-    let request = CreateAgentRequest::builder()
+    let mut builder = CreateAgentRequest::builder()
         .name(name)
-        .description(system.clone())
-        .agent_type(agent_type)
-        .llm_config(LlmConfig::default().model(model))
-        .embedding_config(EmbeddingConfig::default().embedding_model(embedding))
-        .tags(if tags.is_empty() { None } else { Some(tags) })
-        .build();
+        .agent_type(agent_type);
+
+    if !tags.is_empty() {
+        builder = builder.tags(tags);
+    }
+
+    if let Some(system) = system {
+        builder = builder.description(system);
+    }
+
+    let mut request = builder.build();
+
+    // Use shorthand fields for model and embedding
+    request.model = Some(model);
+    request.embedding = Some(embedding);
 
     match client.agents().create(request).await {
         Ok(agent) => match output {
             "json" => {
                 println!("{}", serde_json::to_string(&agent).into_diagnostic()?);
+                Ok(())
             }
             "pretty" => {
                 println!(
                     "{}",
                     serde_json::to_string_pretty(&agent).into_diagnostic()?
                 );
+                Ok(())
             }
             _ => {
                 println!("Agent created successfully!");
@@ -173,9 +183,10 @@ async fn create_agent(
                 }
                 println!("  Type: {:?}", agent.agent_type);
                 println!("\nUse 'letta agent get {}' to see full details.", agent.id);
+                Ok(())
             }
         },
-        Err(e) => Err(e).wrap_err("Failed to create agent"),
+        Err(e) => Err(e).wrap_err("Failed to create agent")?,
     }
 }
 
@@ -186,12 +197,14 @@ async fn get_agent(client: &LettaClient, id: &str, output: &str) -> miette::Resu
         Ok(agent) => match output {
             "json" => {
                 println!("{}", serde_json::to_string(&agent).into_diagnostic()?);
+                Ok(())
             }
             "pretty" => {
                 println!(
                     "{}",
                     serde_json::to_string_pretty(&agent).into_diagnostic()?
                 );
+                Ok(())
             }
             _ => {
                 println!("Agent Details:");
@@ -201,34 +214,23 @@ async fn get_agent(client: &LettaClient, id: &str, output: &str) -> miette::Resu
                     println!("  Description: {}", desc);
                 }
                 println!("  Type: {:?}", agent.agent_type);
-                if let Some(tags) = &agent.tags {
-                    if !tags.is_empty() {
-                        println!("  Tags: {:?}", tags);
+                if !agent.tags.is_empty() {
+                    println!("  Tags: {:?}", agent.tags);
+                }
+                if let Some(ref llm_config) = agent.llm_config {
+                    println!("  Model: {}", llm_config.model);
+                }
+                if let Some(ref embedding_config) = agent.embedding_config {
+                    if let Some(ref model) = embedding_config.embedding_model {
+                        println!("  Embedding Model: {}", model);
                     }
                 }
-                println!("  Model: {}", agent.llm_config.model);
-                println!(
-                    "  Embedding Model: {}",
-                    agent.embedding_config.embedding_model
-                );
                 println!("  Messages: {}", agent.message_ids.len());
-                println!(
-                    "  Created: {}",
-                    agent
-                        .created_at
-                        .map(|t| t.to_string())
-                        .unwrap_or_else(|| "unknown".to_string())
-                );
-                println!(
-                    "  Last Run: {}",
-                    agent
-                        .last_run_at
-                        .map(|t| t.to_string())
-                        .unwrap_or_else(|| "never".to_string())
-                );
+                println!("  Created: {}", agent.created_at);
+                Ok(())
             }
         },
-        Err(e) => Err(e).wrap_err("Failed to get agent"),
+        Err(e) => Err(e).wrap_err("Failed to get agent")?,
     }
 }
 

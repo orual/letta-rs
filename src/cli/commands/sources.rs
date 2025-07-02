@@ -2,6 +2,7 @@
 
 use clap::Parser;
 
+/// Sources-related commands.
 #[derive(Parser, Debug)]
 pub enum SourcesCommand {
     /// List all sources
@@ -52,6 +53,7 @@ pub enum SourcesCommand {
     Passages(PassagesCommand),
 }
 
+/// Files subcommands.
 #[derive(Parser, Debug)]
 pub enum FilesCommand {
     /// List files in a source
@@ -101,6 +103,7 @@ pub enum FilesCommand {
     },
 }
 
+/// Passages subcommands.
 #[derive(Parser, Debug)]
 pub enum PassagesCommand {
     /// List passages from a source
@@ -116,6 +119,7 @@ pub enum PassagesCommand {
     },
 }
 
+/// Handle sources commands.
 pub async fn handle(cmd: SourcesCommand, client: &crate::LettaClient) -> miette::Result<()> {
     match cmd {
         SourcesCommand::List { .. } => {
