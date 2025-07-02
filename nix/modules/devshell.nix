@@ -17,7 +17,6 @@
           nixd # Nix language server
           bacon
           cargo-release
-          config.process-compose.cargo-doc-live.outputs.package
         ];
       };
     };

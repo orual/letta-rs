@@ -135,7 +135,7 @@ The Nix configuration uses flake-parts for modularity and imports rust-flake for
 
 ### Key Dependencies
 - `clap` (4.5+) with derive and env features for CLI argument parsing
-- Development tools: just, bacon, nixd, cargo-doc-live, docker compose
+- Development tools: just, bacon, nixd, docker compose
 
 ### Critical Implementation Details
 
