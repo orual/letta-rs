@@ -20,7 +20,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-letta = "0.1.2"
+letta = "0.1.3"
 ```
 
 ## CLI Installation
@@ -87,8 +87,8 @@ The CLI supports multiple output formats:
 
 | letta client | letta server |
 |--------------|--------------|
-| 0.1.2        | 0.8.8        |
-| 0.1.0-0.1.1  | 0.8.x        |
+| 0.1.3        | 0.8.8        |
+| 0.1.0-0.1.2  | 0.8.x        |
 
 ## Quick Start
 
