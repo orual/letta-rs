@@ -6,7 +6,7 @@ use crate::types::message::{
 };
 use crate::LettaClient;
 use clap::Parser;
-use miette::{miette, Context, IntoDiagnostic};
+use miette::{Context, IntoDiagnostic};
 use std::str::FromStr;
 
 /// Message-related commands.

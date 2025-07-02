@@ -6,7 +6,7 @@ use crate::types::memory::{
 };
 use crate::LettaClient;
 use clap::Parser;
-use miette::{miette, Context, IntoDiagnostic};
+use miette::{Context, IntoDiagnostic};
 use std::str::FromStr;
 
 /// Memory-related commands.

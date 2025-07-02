@@ -69,9 +69,8 @@ just pre-commit-all # Format and lint
 # Local Letta server for testing
 cd local-server && docker compose up -d
 
-# CLI tool (generates JSON, doesn't make API calls)
-cargo run --features cli -- agent create -n "Test" -o json | \
-  curl -X POST http://localhost:8283/v1/agents -H "Content-Type: application/json" -d @-
+# CLI tool (fully functional with all API operations)
+cargo run --features cli -- --help
 ```
 
 ## Architecture
@@ -237,10 +236,11 @@ cargo test --doc         # Doc tests
 
 1. ~~**Rename crate to `letta`**~~ - ✅ Completed
 2. ~~**Finish CLI refactoring**~~ - ✅ Completed, all commands migrated to modular structure
-3. **Documentation pass** - Update examples to use new ergonomic features
-4. **Implement sources CLI commands** - Document management functionality
-5. **Implement batch CLI commands** - Batch operations support
-6. **Implement upsert-from-function** - Port Python SDK's function-based agent creation feature
+3. ~~**Implement sources CLI commands**~~ - ✅ Completed with full file/passage management
+4. **Documentation pass** - Update README with CLI installation and examples
+5. **Implement upsert-from-function** - Port Python SDK's function-based agent creation feature
+
+Note: Batch CLI implementation skipped due to server-side API limitations.
 
 ## Sources CLI Implementation Plan
 
@@ -320,9 +320,10 @@ The CLI (`letta` binary) is now fully functional with complete API integration. 
 
 ### Current Features
 - **Agent Management**: list, create, get, delete operations
-- **Message Management**: send messages with streaming support
+- **Message Management**: send messages with streaming support (token-by-token display)
 - **Memory Management**: view/edit core memory, search/add archival memory
 - **Tool Management**: create, list, get, delete custom tools with validation
+- **Source Management**: create sources, upload/manage files, view processed passages
 - **Health Check**: Server status verification
 - **Authentication**: API key via CLI arg or environment variable
 - **Output Formats**: JSON, pretty-printed JSON, and human-readable summaries
@@ -345,7 +346,7 @@ src/
 │       ├── message.rs   # Message commands (✅ fully implemented)
 │       ├── memory.rs    # Memory commands (✅ fully implemented)
 │       ├── tools.rs     # Tools commands (✅ fully implemented)
-│       └── sources.rs   # Sources commands (❌ not yet implemented)
+│       └── sources.rs   # Sources commands (✅ fully implemented)
 ```
 
 #### Completed Improvements
@@ -357,9 +358,8 @@ src/
 
 ### Future CLI Improvements
 
-1. **Additional Commands** (after refactoring):
-   - `sources` subcommand for document management (planned)
-   - `batch` subcommand for batch operations (planned)
+1. **Additional Commands**:
+   - `batch` subcommand for batch operations (skipped due to server API limitations)
 
 2. **Interactive Features**:
    - Interactive agent chat mode (`letta chat <agent-id>`)
