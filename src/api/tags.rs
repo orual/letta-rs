@@ -25,7 +25,7 @@ impl<'a> TagsApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn list(&self, params: Option<ListTagsParams>) -> LettaResult<Vec<String>> {
         let mut query_params = Vec::new();
 

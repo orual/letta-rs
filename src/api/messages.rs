@@ -49,7 +49,7 @@ impl<'a> MessageApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn list(
         &self,
         agent_id: &LettaId,
@@ -72,7 +72,7 @@ impl<'a> MessageApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn create(
         &self,
         agent_id: &LettaId,
@@ -92,7 +92,7 @@ impl<'a> MessageApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn reset(
         &self,
         agent_id: &LettaId,
@@ -128,7 +128,7 @@ impl<'a> MessageApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     ///
     /// # Examples
     ///
@@ -256,7 +256,7 @@ impl<'a> MessageApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn update(
         &self,
         agent_id: &LettaId,
@@ -283,11 +283,11 @@ impl<'a> MessageApi<'a> {
     ///
     /// # Returns
     ///
-    /// A [`Run`] object containing the run ID and status information.
+    /// A [`crate::types::Run`] object containing the run ID and status information.
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn create_async(
         &self,
         agent_id: &LettaId,

@@ -29,7 +29,7 @@ impl<'a> VoiceApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn create_voice_chat_completions(
         &self,
         agent_id: &LettaId,

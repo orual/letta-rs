@@ -6,10 +6,10 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum LettaEnvironment {
-    /// Letta Cloud API (https://api.letta.com).
+    /// Letta Cloud API (<https://api.letta.com>).
     /// Requires API authentication.
     Cloud,
-    /// Self-hosted or local Letta server (http://localhost:8283).
+    /// Self-hosted or local Letta server (<http://localhost:8283>).
     /// Typically doesn't require authentication.
     SelfHosted,
 }

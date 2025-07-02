@@ -24,7 +24,7 @@ impl<'a> BlocksApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn list(&self, params: Option<ListBlocksParams>) -> LettaResult<Vec<Block>> {
         self.client
             .get_with_query("v1/blocks/", &params.unwrap_or_default())
@@ -39,7 +39,7 @@ impl<'a> BlocksApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn create(&self, request: CreateBlockRequest) -> LettaResult<Block> {
         self.client.post("v1/blocks/", &request).await
     }
@@ -52,7 +52,7 @@ impl<'a> BlocksApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn get(&self, block_id: &LettaId) -> LettaResult<Block> {
         self.client.get(&format!("v1/blocks/{}", block_id)).await
     }
@@ -66,7 +66,7 @@ impl<'a> BlocksApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn update(
         &self,
         block_id: &LettaId,
@@ -85,7 +85,7 @@ impl<'a> BlocksApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails.
+    /// Returns a [crate::error::LettaError] if the request fails.
     pub async fn delete(&self, block_id: &LettaId) -> LettaResult<()> {
         self.client
             .delete_no_response(&format!("v1/blocks/{}", block_id))
@@ -96,7 +96,7 @@ impl<'a> BlocksApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn count(&self) -> LettaResult<u32> {
         self.client.get("v1/blocks/count").await
     }

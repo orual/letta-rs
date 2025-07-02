@@ -28,7 +28,7 @@ impl<'a> IdentitiesApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn list(&self, params: Option<ListIdentitiesParams>) -> LettaResult<Vec<Identity>> {
         if let Some(params) = params {
             self.client.get_with_query("v1/identities/", &params).await
@@ -45,7 +45,7 @@ impl<'a> IdentitiesApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn create(&self, request: CreateIdentityRequest) -> LettaResult<Identity> {
         self.client.post("v1/identities/", &request).await
     }
@@ -59,7 +59,7 @@ impl<'a> IdentitiesApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn create_with_project(
         &self,
         request: CreateIdentityRequest,
@@ -86,7 +86,7 @@ impl<'a> IdentitiesApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn get(&self, identity_id: &LettaId) -> LettaResult<Identity> {
         self.client
             .get(&format!("v1/identities/{}", identity_id))
@@ -102,7 +102,7 @@ impl<'a> IdentitiesApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn update(
         &self,
         identity_id: &LettaId,
@@ -121,7 +121,7 @@ impl<'a> IdentitiesApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails.
+    /// Returns a [crate::error::LettaError] if the request fails.
     pub async fn delete(&self, identity_id: &LettaId) -> LettaResult<()> {
         self.client
             .delete_no_response(&format!("v1/identities/{}", identity_id))
@@ -132,7 +132,7 @@ impl<'a> IdentitiesApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn count(&self) -> LettaResult<u32> {
         let response: serde_json::Value = self.client.get("v1/identities/count").await?;
         // The response is just a bare number
@@ -154,7 +154,7 @@ impl<'a> IdentitiesApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails, if the identity doesn't exist,
+    /// Returns a [crate::error::LettaError] if the request fails, if the identity doesn't exist,
     /// or if the response cannot be parsed.
     pub async fn upsert(&self, request: CreateIdentityRequest) -> LettaResult<Identity> {
         self.client.put("v1/identities/", &request).await
@@ -174,7 +174,7 @@ impl<'a> IdentitiesApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails, if the identity doesn't exist,
+    /// Returns a [crate::error::LettaError] if the request fails, if the identity doesn't exist,
     /// or if the response cannot be parsed.
     pub async fn upsert_with_project(
         &self,

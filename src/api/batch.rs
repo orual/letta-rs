@@ -22,7 +22,7 @@ impl<'a> BatchApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn list(&self) -> LettaResult<Vec<BatchRun>> {
         self.client.get("v1/messages/batches").await
     }
@@ -40,7 +40,7 @@ impl<'a> BatchApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     /// May return a 500 Internal Server Error with `NotImplementedError` if the server
     /// does not support batch processing.
     pub async fn create(&self, request: CreateBatchRequest) -> LettaResult<BatchRun> {
@@ -55,7 +55,7 @@ impl<'a> BatchApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn get(&self, batch_id: &LettaId) -> LettaResult<BatchRun> {
         self.client
             .get(&format!("v1/messages/batches/{}", batch_id))
@@ -70,7 +70,7 @@ impl<'a> BatchApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn cancel(&self, batch_id: &LettaId) -> LettaResult<BatchRun> {
         self.client
             .patch(
@@ -89,7 +89,7 @@ impl<'a> BatchApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn list_messages(
         &self,
         batch_id: &LettaId,

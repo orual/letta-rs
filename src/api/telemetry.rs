@@ -24,7 +24,7 @@ impl<'a> TelemetryApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn retrieve_provider_trace(&self, step_id: &str) -> LettaResult<TelemetryTrace> {
         self.client.get(&format!("v1/telemetry/{}", step_id)).await
     }

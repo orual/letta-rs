@@ -1,34 +1,118 @@
-//! # Letta Rust Client
+//! # letta
 //!
-//! A robust, fully-featured Rust client for the [Letta REST API](https://docs.letta.com/api-reference/overview).
+//! A Rust client library for the [Letta](https://letta.com) REST API, providing idiomatic Rust bindings
+//! for building stateful AI agents with persistent memory and context.
 //!
-//! Letta is a platform for building stateful AI agents with persistent memory and context
-//! across conversations. This client provides a comprehensive, idiomatic Rust interface
-//! to all Letta API endpoints with full type safety.
+//! Unlike the Letta-provided TypeScript and Python libraries, this was not generated from the OpenAPI spec,
+//! but implemented by hand (with substantial LLM assistance). As such it exposes things in slightly different,
+//! mildly opinionated ways, and includes a number of Rust-oriented affordances.
+//!
+//! ## Features
+//!
+//! - **Pagination**: Automatic cursor-based pagination with `PaginatedStream`
+//! - **Type Safety**: Comprehensive type definitions for all API requests/responses
+//! - **Flexible Configuration**: Support for cloud and local deployments
+//! - **Rich Error Handling**: Detailed error types
+//! - **Well Tested**: Extensive test coverage with integration tests
+//!
+//! ## Installation
+//!
+//! Add this to your `Cargo.toml`:
+//!
+//! ```toml
+//! [dependencies]
+//! letta = "0.1.2"
+//! ```
+//!
+//! ### CLI Installation
+//!
+//! The letta crate includes an optional CLI tool for interacting with Letta servers:
+//!
+//! ```bash
+//! # Install from crates.io
+//! cargo install letta --features cli
+//!
+//! # Or build from source
+//! git clone https://github.com/orual/letta-rs
+//! cd letta-rs
+//! cargo install --path . --features cli
+//! ```
+//!
+//! After installation, the `letta` command will be available in your PATH.
+//!
+//! ### CLI Configuration
+//!
+//! Set your API key (for cloud deployments):
+//! ```bash
+//! export LETTA_API_KEY=your-api-key
+//! ```
+//!
+//! Or specify the base URL for local servers:
+//! ```bash
+//! export LETTA_BASE_URL=http://localhost:8283
+//! ```
+//!
+//! ### CLI Usage Examples
+//!
+//! ```bash
+//! # Check server health
+//! letta health
+//!
+//! # List all agents
+//! letta agent list
+//!
+//! # Create a new agent
+//! letta agent create -n "My Assistant" -m letta/letta-free
+//!
+//! # Send a message to an agent (with streaming)
+//! letta message send -a <agent-id> "Hello, how are you?"
+//!
+//! # View agent memory
+//! letta memory view -a <agent-id>
+//!
+//! # Upload a document to a source
+//! letta sources create -n "docs" -e letta/letta-free
+//! letta sources files upload <source-id> -f document.pdf
+//!
+//! # Get help for any command
+//! letta --help
+//! letta agent --help
+//! ```
+//!
+//! The CLI supports multiple output formats:
+//! - `--output summary` (default) - Human-readable format
+//! - `--output json` - JSON output for scripting
+//! - `--output pretty` - Pretty-printed JSON
+//!
+//! ## Compatibility
+//!
+//! | letta client | letta server |
+//! |--------------|--------------|
+//! | 0.1.2        | 0.8.8        |
+//! | 0.1.0-0.1.1  | 0.8.x        |
 //!
 //! ## Quick Start
 //!
 //! ```rust,no_run
-//! use letta::{LettaClient, LettaEnvironment};
+//! use letta::{ClientConfig, LettaClient};
+//! use letta::types::{CreateAgentRequest, AgentType};
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {
-//!     // Connect to local Letta server
-//!     let client = LettaClient::local()?;
+//!     // Create client for local Letta server
+//!     let config = ClientConfig::new("http://localhost:8283")?;
+//!     let client = LettaClient::new(config)?;
 //!
-//!     // Or connect to Letta Cloud with an API token
-//!     // let client = LettaClient::cloud("your-api-token")?;
+//!     // Create an agent using builder pattern
+//!     let agent_request = CreateAgentRequest::builder()
+//!         .name("My Assistant")
+//!         .agent_type(AgentType::MemGPT)
+//!         .model("letta/letta-free")  // Shorthand for LLM config
+//!         .embedding("letta/letta-free")  // Shorthand for embedding config
+//!         .build();
 //!
-//!     // Or use the builder for custom configuration
-//!     // let client = LettaClient::builder()
-//!     //     .environment(LettaEnvironment::Cloud)
-//!     //     .auth(letta::auth::AuthConfig::bearer("your-token"))
-//!     //     .base_url("https://custom.letta.com")  // optional override
-//!     //     .build()?;
-//!
-//!     // List all agents
-//!     let agents = client.agents().list(None).await?;
-//!     println!("Found {} agents", agents.len());
+//!     let agent = client.agents().create(agent_request).await?;
+//!     println!("Created agent: {}", agent.id);
 //!
 //!     Ok(())
 //! }
@@ -172,6 +256,59 @@
 //! }
 //! ```
 //!
+//! ## Working with Tools
+//!
+//! ```rust,no_run
+//! use letta::{LettaClient, types::*};
+//! use serde_json::json;
+//!
+//! #[tokio::main]
+//! async fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     let client = LettaClient::local()?;
+//!     let agent_id = "agent-00000000-0000-0000-0000-000000000000";
+//!
+//!     // Create a custom tool
+//!     let tool = CreateToolRequest {
+//!         description: Some("Get current weather for a location".to_string()),
+//!         source_code: r#"
+//! def get_weather(location: str) -> str:
+//!     """Get weather for a location.
+//!     
+//!     Args:
+//!         location: The location to get weather for
+//!         
+//!     Returns:
+//!         Weather information as a string
+//!     """
+//!     return f"The weather in {location} is sunny and 72°F"
+//! "#.to_string(),
+//!         source_type: Some(SourceType::Python),
+//!         json_schema: Some(json!({
+//!             "name": "get_weather",
+//!             "description": "Get current weather for a location",
+//!             "parameters": {
+//!                 "type": "object",
+//!                 "properties": {
+//!                     "location": {
+//!                         "type": "string",
+//!                         "description": "The location to get weather for"
+//!                     }
+//!                 },
+//!                 "required": ["location"]
+//!             }
+//!         })),
+//!         ..Default::default()
+//!     };
+//!
+//!     let created_tool = client.tools().create(tool).await?;
+//!
+//!     // Tools are automatically available to agents after creation
+//!     println!("Created tool: {}", created_tool.name);
+//!
+//!     Ok(())
+//! }
+//! ```
+//!
 //! ## Pagination Support
 //!
 //! ```rust,no_run
@@ -217,16 +354,67 @@
 //! }
 //! ```
 //!
-//! ## Features
+//! ## Configuration
 //!
-//! - **Complete API Coverage**: All 20+ Letta REST API endpoints
-//! - **Async/Await**: Full async support with tokio
-//! - **Streaming**: Server-sent events for real-time messaging
-//! - **Pagination**: Automatic cursor-based pagination with `PaginatedStream`
-//! - **Type Safety**: Comprehensive type definitions with serde
-//! - **Error Handling**: Rich error types with miette diagnostics
-//! - **Authentication**: Bearer token and API key support
-//! - **Documentation**: Extensive docs with examples
+//! ### Local Development Server
+//!
+//! ```rust,no_run
+//! use letta::{ClientConfig, LettaClient};
+//!
+//! // No authentication required for local server
+//! let config = ClientConfig::new("http://localhost:8283")?;
+//! let client = LettaClient::new(config)?;
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
+//!
+//! ### Letta Cloud
+//!
+//! ```rust,no_run
+//! use letta::{ClientConfig, LettaClient};
+//! use letta::auth::AuthConfig;
+//!
+//! // Use API key for cloud deployment
+//! let config = ClientConfig::new("https://api.letta.com")?
+//!     .auth(AuthConfig::bearer("your-api-key"));
+//! let client = LettaClient::new(config)?;
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
+//!
+//! ### Custom Headers
+//!
+//! ```rust,no_run
+//! use letta::{ClientConfig, LettaClient};
+//!
+//! // Add custom headers like X-Project
+//! let config = ClientConfig::new("http://localhost:8283")?
+//!     .header("X-Project", "my-project")?;
+//! let client = LettaClient::new(config)?;
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
+//!
+//! ## API Coverage
+//!
+//! ### Core APIs
+//! - ✅ **Agents** - Create, update, delete, and manage AI agents
+//! - ✅ **Messages** - Send messages and stream responses with SSE
+//! - ✅ **Memory** - Manage core and archival memory with semantic search
+//! - ✅ **Tools** - Register and manage agent tools (functions)
+//! - ✅ **Sources** - Upload documents and manage knowledge sources
+//! - ✅ **Blocks** - Manage memory blocks and persistent storage
+//!
+//! ### Advanced APIs
+//! - ✅ **Groups** - Multi-agent conversations
+//! - ✅ **Runs** - Execution tracking and debugging
+//! - ✅ **Jobs** - Asynchronous job management
+//! - ✅ **Batch** - Batch message processing
+//! - ✅ **Templates** - Agent templates for quick deployment
+//! - ✅ **Projects** - Project organization
+//! - ✅ **Models** - LLM and embedding model configuration
+//! - ✅ **Providers** - LLM provider management
+//! - ✅ **Identities** - Identity and permissions management
+//! - ✅ **Tags** - Tag-based organization
+//! - ✅ **Telemetry** - Usage tracking and monitoring
+//! - 🚧 **Voice** - Voice conversation support (beta)
 //!
 //! ## API Sections
 //!

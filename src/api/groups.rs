@@ -31,7 +31,7 @@ impl<'a> GroupApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn list(&self, params: Option<GroupsListRequest>) -> LettaResult<Vec<Group>> {
         self.client
             .get_with_query("v1/groups", &params.unwrap_or_default())
@@ -46,7 +46,7 @@ impl<'a> GroupApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn create(&self, request: GroupCreate) -> LettaResult<Group> {
         self.client.post("v1/groups", &request).await
     }
@@ -59,7 +59,7 @@ impl<'a> GroupApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn get(&self, group_id: &LettaId) -> LettaResult<Group> {
         self.client.get(&format!("v1/groups/{}", group_id)).await
     }
@@ -73,7 +73,7 @@ impl<'a> GroupApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn update(&self, group_id: &LettaId, request: GroupUpdate) -> LettaResult<Group> {
         self.client
             .patch(&format!("v1/groups/{}", group_id), &request)
@@ -88,7 +88,7 @@ impl<'a> GroupApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn delete(&self, group_id: &LettaId) -> LettaResult<String> {
         self.client.delete(&format!("v1/groups/{}", group_id)).await
     }
@@ -102,7 +102,7 @@ impl<'a> GroupApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn send_message(
         &self,
         group_id: &LettaId,
@@ -134,7 +134,7 @@ impl<'a> GroupApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn send_message_streaming(
         &self,
         group_id: &LettaId,
@@ -223,7 +223,7 @@ impl<'a> GroupApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn update_message(
         &self,
         group_id: &LettaId,
@@ -247,7 +247,7 @@ impl<'a> GroupApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn reset(
         &self,
         group_id: &LettaId,
@@ -275,7 +275,7 @@ impl<'a> GroupApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn list_messages(
         &self,
         group_id: &LettaId,

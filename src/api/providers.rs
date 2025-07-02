@@ -28,7 +28,7 @@ impl<'a> ProvidersApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn list(&self, params: Option<ListProvidersParams>) -> LettaResult<Vec<Provider>> {
         let mut query_params = Vec::new();
 
@@ -64,7 +64,7 @@ impl<'a> ProvidersApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn create(&self, provider: ProviderCreate) -> LettaResult<Provider> {
         self.client.post("v1/providers", &provider).await
     }
@@ -77,7 +77,7 @@ impl<'a> ProvidersApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails.
+    /// Returns a [crate::error::LettaError] if the request fails.
     pub async fn delete(&self, provider_id: &LettaId) -> LettaResult<ProviderDeleteResponse> {
         self.client
             .delete(&format!("v1/providers/{}", provider_id))
@@ -93,7 +93,7 @@ impl<'a> ProvidersApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn update(
         &self,
         provider_id: &LettaId,
@@ -114,7 +114,7 @@ impl<'a> ProvidersApi<'a> {
     ///
     /// # Errors
     ///
-    /// Returns a [`LettaError`] if the request fails or if the response cannot be parsed.
+    /// Returns a [crate::error::LettaError] if the request fails or if the response cannot be parsed.
     pub async fn check(&self, provider_id: &LettaId) -> LettaResult<ProviderCheckResponse> {
         self.client
             .get(&format!("v1/providers/{}/check", provider_id))

@@ -16,14 +16,13 @@ Unlike the Letta-provided TypeScript and Python libraries, this was not generate
 - **Rich Error Handling**: Detailed error types
 - **Well Tested**: Extensive test coverage with integration tests
 
-## Installation
+## Usage
 
 Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
 letta = "0.1.2"
-tokio = { version = "1", features = ["full"] }
 ```
 
 ## CLI Installation
@@ -35,7 +34,7 @@ The letta crate includes an optional CLI tool for interacting with Letta servers
 cargo install letta --features cli
 
 # Or build from source
-git clone https://github.com/srid/letta-rs
+git clone https://github.com/orual/letta-rs
 cd letta-rs
 cargo install --path . --features cli
 ```
@@ -241,6 +240,7 @@ while let Some(agent) = agent_stream.next().await {
 use letta::types::{CreateToolRequest, Tool};
 
 // Create a custom tool
+// Note: this example is simplified, see the tool documentation for details.
 let tool = CreateToolRequest {
     name: "get_weather".to_string(),
     description: Some("Get current weather for a location".to_string()),
@@ -349,5 +349,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Related Projects
 
 - [Letta](https://github.com/letta-ai/letta) - The official Letta server
-- [letta-node](https://github.com/letta-ai/letta-node) - TypeScript/JavaScript SDK
-- [letta-python](https://github.com/letta-ai/letta-python) - Python SDK
+- [letta-node](https://github.com/letta-ai/letta-node) - Official TypeScript/JavaScript SDK
+- [letta-python](https://github.com/letta-ai/letta-python) - Official Python SDK
