@@ -1006,6 +1006,221 @@ impl CreateAgentRequestBuilder {
         self
     }
 
+    /// Set tool IDs to attach (alternative to tools).
+    pub fn tool_ids(mut self, tool_ids: Vec<LettaId>) -> Self {
+        self.request.tool_ids = Some(tool_ids);
+        self
+    }
+
+    /// Set source IDs to attach.
+    pub fn source_ids(mut self, source_ids: Vec<LettaId>) -> Self {
+        self.request.source_ids = Some(source_ids);
+        self
+    }
+
+    /// Set metadata.
+    pub fn metadata(mut self, metadata: Metadata) -> Self {
+        self.request.metadata = Some(metadata);
+        self
+    }
+
+    /// Set include multi-agent tools.
+    pub fn include_multi_agent_tools(mut self, include: bool) -> Self {
+        self.request.include_multi_agent_tools = Some(include);
+        self
+    }
+
+    /// Set include base tool rules.
+    pub fn include_base_tool_rules(mut self, include: bool) -> Self {
+        self.request.include_base_tool_rules = Some(include);
+        self
+    }
+
+    /// Set include default source.
+    pub fn include_default_source(mut self, include: bool) -> Self {
+        self.request.include_default_source = Some(include);
+        self
+    }
+
+    /// Set response format configuration.
+    pub fn response_format(mut self, format: ResponseFormat) -> Self {
+        self.request.response_format = Some(format);
+        self
+    }
+
+    /// Set enable reasoner.
+    pub fn enable_reasoner(mut self, enable: bool) -> Self {
+        self.request.enable_reasoner = Some(enable);
+        self
+    }
+
+    /// Set message buffer autoclear.
+    pub fn message_buffer_autoclear(mut self, autoclear: bool) -> Self {
+        self.request.message_buffer_autoclear = Some(autoclear);
+        self
+    }
+
+    /// Set block IDs to attach.
+    pub fn block_ids(mut self, block_ids: Vec<LettaId>) -> Self {
+        self.request.block_ids = Some(block_ids);
+        self
+    }
+
+    /// Set context window limit shorthand.
+    pub fn context_window_limit(mut self, limit: u32) -> Self {
+        self.request.context_window_limit = Some(limit);
+        self
+    }
+
+    /// Set embedding chunk size shorthand.
+    pub fn embedding_chunk_size(mut self, size: u32) -> Self {
+        self.request.embedding_chunk_size = Some(size);
+        self
+    }
+
+    /// Set max tokens shorthand.
+    pub fn max_tokens(mut self, max_tokens: u32) -> Self {
+        self.request.max_tokens = Some(max_tokens);
+        self
+    }
+
+    /// Set max reasoning tokens.
+    pub fn max_reasoning_tokens(mut self, max_tokens: u32) -> Self {
+        self.request.max_reasoning_tokens = Some(max_tokens);
+        self
+    }
+
+    /// Create from template.
+    pub fn from_template(mut self, template_name: impl Into<String>) -> Self {
+        self.request.from_template = Some(template_name.into());
+        self
+    }
+
+    /// Mark as template.
+    pub fn template(mut self, is_template: bool) -> Self {
+        self.request.template = Some(is_template);
+        self
+    }
+
+    /// Set memory variables.
+    pub fn memory_variables(mut self, variables: HashMap<String, String>) -> Self {
+        self.request.memory_variables = Some(variables);
+        self
+    }
+
+    /// Set project ID.
+    pub fn project_id(mut self, project_id: LettaId) -> Self {
+        self.request.project_id = Some(project_id);
+        self
+    }
+
+    /// Set template ID.
+    pub fn template_id(mut self, template_id: LettaId) -> Self {
+        self.request.template_id = Some(template_id);
+        self
+    }
+
+    /// Set base template ID.
+    pub fn base_template_id(mut self, base_template_id: LettaId) -> Self {
+        self.request.base_template_id = Some(base_template_id);
+        self
+    }
+
+    /// Set identity IDs.
+    pub fn identity_ids(mut self, identity_ids: Vec<LettaId>) -> Self {
+        self.request.identity_ids = Some(identity_ids);
+        self
+    }
+
+    /// Set enable sleeptime mode.
+    pub fn enable_sleeptime(mut self, enable: bool) -> Self {
+        self.request.enable_sleeptime = Some(enable);
+        self
+    }
+
+    // Convenience methods
+
+    /// Add a single tool by name.
+    pub fn tool(mut self, tool: impl Into<String>) -> Self {
+        self.request
+            .tools
+            .get_or_insert_with(Vec::new)
+            .push(tool.into());
+        self
+    }
+
+    /// Add a single tag.
+    pub fn tag(mut self, tag: impl Into<String>) -> Self {
+        self.request
+            .tags
+            .get_or_insert_with(Vec::new)
+            .push(tag.into());
+        self
+    }
+
+    /// Add a single tool ID.
+    pub fn tool_id(mut self, tool_id: LettaId) -> Self {
+        self.request
+            .tool_ids
+            .get_or_insert_with(Vec::new)
+            .push(tool_id);
+        self
+    }
+
+    /// Add a single source ID.
+    pub fn source_id(mut self, source_id: LettaId) -> Self {
+        self.request
+            .source_ids
+            .get_or_insert_with(Vec::new)
+            .push(source_id);
+        self
+    }
+
+    /// Add a single block ID.
+    pub fn block_id(mut self, block_id: LettaId) -> Self {
+        self.request
+            .block_ids
+            .get_or_insert_with(Vec::new)
+            .push(block_id);
+        self
+    }
+
+    /// Add a single identity ID.
+    pub fn identity_id(mut self, identity_id: LettaId) -> Self {
+        self.request
+            .identity_ids
+            .get_or_insert_with(Vec::new)
+            .push(identity_id);
+        self
+    }
+
+    /// Add a single tool rule.
+    pub fn tool_rule(mut self, rule: ToolRule) -> Self {
+        self.request
+            .tool_rules
+            .get_or_insert_with(Vec::new)
+            .push(rule);
+        self
+    }
+
+    /// Add a single memory variable.
+    pub fn memory_variable(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        self.request
+            .memory_variables
+            .get_or_insert_with(HashMap::new)
+            .insert(key.into(), value.into());
+        self
+    }
+
+    /// Add a single tool execution environment variable.
+    pub fn tool_exec_env_var(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        self.request
+            .tool_exec_environment_variables
+            .get_or_insert_with(HashMap::new)
+            .insert(key.into(), value.into());
+        self
+    }
+
     /// Build the request.
     pub fn build(self) -> CreateAgentRequest {
         self.request
@@ -1293,6 +1508,49 @@ mod tests {
         assert_eq!(request.name.as_deref(), Some("My Agent"));
         assert_eq!(request.memory_blocks.as_ref().unwrap().len(), 2);
         assert_eq!(request.tags.as_ref().unwrap().len(), 2);
+    }
+
+    #[test]
+    fn test_create_agent_request_builder_extended() {
+        let request = CreateAgentRequest::builder()
+            .name("Advanced Agent")
+            .model("gpt-4")
+            .embedding("text-embedding-ada-002")
+            .include_base_tools(true)
+            .include_multi_agent_tools(true)
+            .enable_sleeptime(true)
+            .enable_reasoner(true)
+            .context_window_limit(8192)
+            .max_tokens(2048)
+            .max_reasoning_tokens(4096)
+            .template(true)
+            .tag("production")
+            .tag("multiagent")
+            .tool("send_message")
+            .tool("archival_memory_search")
+            .memory_variable("user_name", "Alice")
+            .memory_variable("agent_role", "assistant")
+            .tool_exec_env_var("API_KEY", "secret123")
+            .response_format(ResponseFormat::json(None))
+            .build();
+
+        assert_eq!(request.name.as_deref(), Some("Advanced Agent"));
+        assert_eq!(request.model.as_deref(), Some("gpt-4"));
+        assert_eq!(request.enable_sleeptime, Some(true));
+        assert_eq!(request.enable_reasoner, Some(true));
+        assert_eq!(request.context_window_limit, Some(8192));
+        assert_eq!(request.template, Some(true));
+        assert_eq!(request.tags.as_ref().unwrap().len(), 2);
+        assert_eq!(request.tools.as_ref().unwrap().len(), 2);
+        assert_eq!(request.memory_variables.as_ref().unwrap().len(), 2);
+        assert_eq!(
+            request
+                .tool_exec_environment_variables
+                .as_ref()
+                .unwrap()
+                .len(),
+            1
+        );
     }
 
     #[test]

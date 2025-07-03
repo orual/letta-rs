@@ -359,7 +359,6 @@ pub enum UpdateMcpServerRequest {
 
 /// MCP tool definition.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
 pub struct McpTool {
     /// Tool name.
     pub name: String,
@@ -367,6 +366,7 @@ pub struct McpTool {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     /// Input schema.
+    #[serde(rename = "inputSchema")]
     pub input_schema: serde_json::Value,
     /// Tool annotations.
     #[serde(skip_serializing_if = "Option::is_none")]

@@ -326,7 +326,6 @@ cargo doc --open
 
 ```bash
 # Start local Letta server for testing
-cd local-server
 docker compose up -d
 
 # Run integration tests
